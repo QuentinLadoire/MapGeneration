@@ -377,11 +377,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 624d3d7cf85c4c8408894b7229dc4d36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  radius: 3
+  radius: 2
   areaWidth: 30
   areaHeight: 30
   sampleLimitBeforeRejection: 30
   seed: 0
+  startPointPickMode: 5
+  customStartPoint: {x: 0, y: 0}
 --- !u!23 &380926844
 MeshRenderer:
   m_ObjectHideFlags: 0
