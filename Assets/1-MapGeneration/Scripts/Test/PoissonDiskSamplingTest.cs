@@ -4,38 +4,40 @@ using UnityEngine;
 
 public class PoissonDiskSamplingTest : MonoBehaviour
 {
-	[SerializeField] private float displayRadius = 0.1f;
+	[Header("PoissonDiskSampling Settings")]
+	[SerializeField] private float radius = 1.0f;
+	[SerializeField] private float areaWidth = 30.0f;
+	[SerializeField] private float areaHeight = 30.0f;
+	[SerializeField] private int sampleLimitBeforeRejection = 30;
+	[SerializeField] private int seed = 0;
 
-	PoissonDiskSampling poissonDiskSampling = new PoissonDiskSampling();
 	Point2D[] points = null;
+	PoissonDiskSampling poissonDiskSampling = null;
 
-	private void Start()
+	private void GenerateTexture()
 	{
-		var startTime = Time.realtimeSinceStartup;
-		poissonDiskSampling.GeneratePoints();
-		var endTime = Time.realtimeSinceStartup;
+		var texture = new Texture2D(256, 256);
+		texture.filterMode = FilterMode.Point;
+		foreach (var point in points)
+			texture.SetPixel((int)(256 * (point.x / areaWidth)), (int)(256 * (point.y / areaHeight)), Color.red);
 
-		Debug.Log("Process time : " + (endTime - startTime));
+		texture.Apply();
 
-		points = poissonDiskSampling.Points;
-		
-		//Debug.Log(points.Length);
-		//foreach (var point in points)
-		//{
-		//	Debug.Log("x : " + point.x + " - y : " + point.y);
-		//}
+		GetComponent<MeshRenderer>().sharedMaterial.mainTexture = texture;
 	}
 
-	private void OnDrawGizmos()
+	private void OnValidate()
 	{
-		if (points == null)
-			return;
+		if (poissonDiskSampling == null)
+			poissonDiskSampling = new PoissonDiskSampling();
 
-		Gizmos.color = Color.blue;
-		foreach (var point in points)
-		{
-			var position = new Vector3(point.x, point.y);
-			Gizmos.DrawSphere(position, displayRadius);
-		}
+		poissonDiskSampling.Radius = radius;
+		poissonDiskSampling.AreaWidth = areaWidth;
+		poissonDiskSampling.AreaHeight = areaHeight;
+		poissonDiskSampling.SampleLimitBeforeRejection = sampleLimitBeforeRejection;
+		poissonDiskSampling.Seed = seed;
+
+		poissonDiskSampling.GeneratePoints(ref points);
+		GenerateTexture();
 	}
 }

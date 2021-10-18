@@ -15,25 +15,25 @@ public struct Point2D
 
 public class PoissonDiskSampling
 {
+    private const float Pi2 = 6.28318530718f;
     private const float Sqrt2 = 1.41421356237f;
 
-    private Random random = new Random(0);
-
-    private int sampleLimitBeforeRejection = 30;
-
-    private float radius = 1.0f;
-    private float areaWidth = 30.0f;
-    private float areaHeight = 30.0f;
-
-    private float cellSize = 0.0f;
     private int gridWidth = 0;
     private int gridHeight = 0;
+    private float cellSize = 0.0f;
+
+    private int seed = 0;
+    private Random random = new Random(0);
 
     private int[,] grid = null;
     private List<int> processingPointList = new List<int>();
     private List<Point2D> outputPointList = new List<Point2D>();
 
-    public Point2D[] Points => outputPointList.ToArray();
+    public float Radius { get; set; } = 1.0f;
+    public float AreaWidth { get; set; } = 30.0f;
+    public float AreaHeight { get; set; } = 30.0f;
+    public int SampleLimitBeforeRejection { get; set; } = 30;
+    public int Seed { get => seed; set => SetSeed(value); }
 
     private int CeilToInt(float value)
 	{
@@ -57,10 +57,12 @@ public class PoissonDiskSampling
 
     private bool IsValidPointPosition(Point2D point)
 	{
-        if (point.x < 0.0f || point.x > areaWidth ||
-            point.y < 0.0f || point.y > areaHeight)
+        //Check if point is in area
+        if (point.x < 0.0f || point.x > AreaWidth ||
+            point.y < 0.0f || point.y > AreaHeight)
             return false;
 
+        //Get only nearby cells
         var gridX = FloorToInt(point.x / cellSize);
         var gridY = FloorToInt(point.y / cellSize);
         var startX = Math.Max(0, gridX - 2);
@@ -68,6 +70,7 @@ public class PoissonDiskSampling
         var endX = Math.Min(gridWidth - 1, gridX + 2);
         var endY = Math.Min(gridHeight - 1, gridY + 2);
 
+        //Check if point is within distance r of existing samples
         for (int j = startY; j <= endY; j++)
             for (int i = startX; i <= endX; i++)
             {
@@ -77,7 +80,7 @@ public class PoissonDiskSampling
                     var pointToTest = outputPointList[pointIndex];
 
                     var sqrtDistance = SqrtDistance(pointToTest, point);
-                    if (sqrtDistance < radius * radius)
+                    if (sqrtDistance < Radius * Radius)
                         return false;
                 }
             }
@@ -85,12 +88,17 @@ public class PoissonDiskSampling
         return true;
 	}
 
-    public void GeneratePoints()
+    public void SetSeed(int seed)
+	{
+        this.seed = seed;
+        random = new Random(seed);
+	}
+    public void GeneratePoints(ref Point2D[] points)
 	{
         //Determine Grid Size
-        cellSize = radius / Sqrt2;
-        gridWidth = CeilToInt(areaWidth / cellSize);
-        gridHeight = CeilToInt(areaHeight / cellSize);
+        cellSize = Radius / Sqrt2;
+        gridWidth = CeilToInt(AreaWidth / cellSize);
+        gridHeight = CeilToInt(AreaHeight / cellSize);
 
         //Initialize Grid and List
         grid = new int[gridWidth, gridHeight];
@@ -102,8 +110,8 @@ public class PoissonDiskSampling
         //Pick a Random Point
         var startPoint = new Point2D
         {
-            x = (float)(areaWidth * random.NextDouble()),
-            y = (float)(areaHeight * random.NextDouble())
+            x = (float)(AreaWidth * random.NextDouble()),
+            y = (float)(AreaHeight * random.NextDouble())
         };
 
         //Add the start point to the output list, processing list and grid
@@ -121,11 +129,11 @@ public class PoissonDiskSampling
 
             //Generate sampleLimitBeforeRejection Points
             var noValidPoint = true;
-            for (int i = 0; i < sampleLimitBeforeRejection; i++)
+            for (int i = 0; i < SampleLimitBeforeRejection; i++)
 			{
                 //Generate random angle and distance
-                var angle = 2.0f * (float)Math.PI * (float)random.NextDouble();
-                var distance = Lerp(radius, 2 * radius, (float)random.NextDouble());
+                var angle = Pi2 * (float)random.NextDouble();
+                var distance = Lerp(Radius, 2 * Radius, (float)random.NextDouble());
 
                 //Create new Point
                 var newPoint = new Point2D
@@ -153,5 +161,11 @@ public class PoissonDiskSampling
             if (noValidPoint)
                 processingPointList.RemoveAt(randomProcessingListIndex);
 		}
+
+        points = outputPointList.ToArray();
+
+        grid = null;
+        outputPointList.Clear();
+        processingPointList.Clear();
 	}
 }
