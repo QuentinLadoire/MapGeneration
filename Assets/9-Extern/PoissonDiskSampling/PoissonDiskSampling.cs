@@ -71,6 +71,11 @@ namespace PoissonDisk
             return x * x + y * y;
         }
 
+        private void SetSeed(int seed)
+        {
+            this.seed = seed;
+            random = new Random(seed);
+        }
         private bool IsValidPointPosition(Point2D point)
         {
             //Check if point is in area
@@ -104,8 +109,23 @@ namespace PoissonDisk
             return true;
         }
 
+        private void Initialize()
+        {
+            //Determine Grid Size
+            cellSize = Radius / Sqrt2;
+            gridWidth = CeilToInt(AreaWidth / cellSize);
+            gridHeight = CeilToInt(AreaHeight / cellSize);
+
+            //Initialize Grid and List
+            grid = new int[gridWidth, gridHeight];
+            grid.Fill(-1);
+
+            outputPointList.Clear();
+            processingPointList.Clear();
+        }
         private Point2D PickStartPoint()
 		{
+            //Return a point according to the Pickmode
             return StartPointPickMode switch
 			{
 				StartPointPickMode.Random => new Point2D
@@ -142,33 +162,45 @@ namespace PoissonDisk
 				_ => new Point2D()//never happen
 			};
 		}
+        private void AddNewPoint(Point2D point)
+		{
+            //Add the start point to the output list, processing list and grid
+            outputPointList.Add(point);
+            processingPointList.Add(outputPointList.Count - 1);
 
-        public void SetSeed(int seed)
-        {
-            this.seed = seed;
-            random = new Random(seed);
+            var gridX = FloorToInt(point.x / cellSize);
+            var gridY = FloorToInt(point.y / cellSize);
+            grid[gridX, gridY] = outputPointList.Count - 1;
+		}
+        private Point2D PickRandomPoint(Point2D point)
+		{
+            //Generate random angle and distance
+            var angle = Pi2 * (float)random.NextDouble();
+            var distance = Lerp(Radius, 2 * Radius, (float)random.NextDouble());
+
+            //Create new Point
+            return new Point2D
+            {
+                x = point.x + distance * (float)Math.Cos(angle),
+                y = point.y + distance * (float)Math.Sin(angle)
+            };
         }
-        public void GeneratePoints(ref Point2D[] points)
-        {
-            //Determine Grid Size
-            cellSize = Radius / Sqrt2;
-            gridWidth = CeilToInt(AreaWidth / cellSize);
-            gridHeight = CeilToInt(AreaHeight / cellSize);
+        private void Reset()
+		{
+            random = new Random(Seed);
 
-            //Initialize Grid and List
-            grid = new int[gridWidth, gridHeight];
-            grid.Fill(-1);
-
+            grid = null;
             outputPointList.Clear();
             processingPointList.Clear();
+        }
 
-            //Pick a Starting Point
+        public void ComputePoints(ref Point2D[] points)
+        {
+            Initialize();
+
+            //Pick and Add the starting point of the process 
             var startPoint = PickStartPoint();
-
-            //Add the start point to the output list, processing list and grid
-            outputPointList.Add(startPoint);
-            processingPointList.Add(0);
-            grid[FloorToInt(startPoint.x / cellSize), FloorToInt(startPoint.y / cellSize)] = 0;
+            AddNewPoint(startPoint);
 
             //Process
             while (processingPointList.Count > 0)
@@ -182,27 +214,14 @@ namespace PoissonDisk
                 var noValidPoint = true;
                 for (int i = 0; i < SampleLimitBeforeRejection; i++)
                 {
-                    //Generate random angle and distance
-                    var angle = Pi2 * (float)random.NextDouble();
-                    var distance = Lerp(Radius, 2 * Radius, (float)random.NextDouble());
+                    //Pick a random point around the processed point
+                    var newPoint = PickRandomPoint(point);
 
-                    //Create new Point
-                    var newPoint = new Point2D
-                    {
-                        x = point.x + distance * (float)Math.Cos(angle),
-                        y = point.y + distance * (float)Math.Sin(angle)
-                    };
-
-                    //Check if it is within distance r of existing points
+                    //Check if the new point is within distance r of existing points
                     if (IsValidPointPosition(newPoint))
                     {
-                        //Add the new point to the output list, processing list and grid
-                        var gridX = FloorToInt(newPoint.x / cellSize);
-                        var gridY = FloorToInt(newPoint.y / cellSize);
-
-                        outputPointList.Add(newPoint);
-                        grid[gridX, gridY] = outputPointList.Count - 1;
-                        processingPointList.Add(outputPointList.Count - 1);
+                        //Add the new point to the process
+                        AddNewPoint(newPoint);
 
                         noValidPoint = false;
                     }
@@ -213,11 +232,10 @@ namespace PoissonDisk
                     processingPointList.RemoveAt(randomProcessingListIndex);
             }
 
+            //Set the points array
             points = outputPointList.ToArray();
 
-            grid = null;
-            outputPointList.Clear();
-            processingPointList.Clear();
+            Reset();
         }
     }
 }
