@@ -39,7 +39,7 @@ namespace PoissonDisk
         private Random random = new Random(0);
 
         private int[,] grid = null;
-        private List<int> processingPointList = new List<int>();
+        private Queue<int> processingPointQueue = new Queue<int>();
         private List<Point2D> outputPointList = new List<Point2D>();
 
         public float Radius { get; set; } = 1.0f;
@@ -121,7 +121,7 @@ namespace PoissonDisk
             grid.Fill(-1);
 
             outputPointList.Clear();
-            processingPointList.Clear();
+            processingPointQueue.Clear();
         }
         private Point2D PickStartPoint()
 		{
@@ -166,7 +166,7 @@ namespace PoissonDisk
 		{
             //Add the start point to the output list, processing list and grid
             outputPointList.Add(point);
-            processingPointList.Add(outputPointList.Count - 1);
+            processingPointQueue.Enqueue(outputPointList.Count - 1);
 
             var gridX = FloorToInt(point.x / cellSize);
             var gridY = FloorToInt(point.y / cellSize);
@@ -191,7 +191,7 @@ namespace PoissonDisk
 
             grid = null;
             outputPointList.Clear();
-            processingPointList.Clear();
+            processingPointQueue.Clear();
         }
 
         public void ComputePoints(ref Point2D[] points)
@@ -203,15 +203,13 @@ namespace PoissonDisk
             AddNewPoint(startPoint);
 
             //Process
-            while (processingPointList.Count > 0)
+            while (processingPointQueue.Count > 0)
             {
-                //Choose a random index from the processing list
-                var randomProcessingListIndex = random.Next(processingPointList.Count);
-                var outputPointIndex = processingPointList[randomProcessingListIndex];
-                var point = outputPointList[outputPointIndex];
+                //Get the processed point
+                var index = processingPointQueue.Dequeue();
+                var point = outputPointList[index];
 
-                //Generate sampleLimitBeforeRejection Points
-                var noValidPoint = true;
+                //Generate `sampleLimitBeforeRejection` Points
                 for (int i = 0; i < SampleLimitBeforeRejection; i++)
                 {
                     //Pick a random point around the processed point
@@ -222,17 +220,11 @@ namespace PoissonDisk
                     {
                         //Add the new point to the process
                         AddNewPoint(newPoint);
-
-                        noValidPoint = false;
                     }
                 }
-
-                //If no such point is found, remove point from the processing list
-                if (noValidPoint)
-                    processingPointList.RemoveAt(randomProcessingListIndex);
             }
 
-            //Set the points array
+            //Set the ref points array
             points = outputPointList.ToArray();
 
             Reset();
