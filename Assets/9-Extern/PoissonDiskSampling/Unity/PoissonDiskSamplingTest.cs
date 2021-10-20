@@ -16,17 +16,6 @@ namespace PoissonDisk.Unity
 		Point2D[] points = null;
 		PoissonDiskSampling poissonDiskSampling = null;
 		
-		private void GenerateTexture()
-		{
-			var texture = new Texture2D(256, 256);
-			texture.filterMode = FilterMode.Point;
-			foreach (var point in points)
-				texture.SetPixel((int)((256 - 1) * (1 - (point.x / areaWidth))), (int)((256 - 1) * (1 - (point.y / areaHeight))), Color.red);
-
-			texture.Apply();
-
-			GetComponent<MeshRenderer>().sharedMaterial.mainTexture = texture;
-		}
 		private void Generate()
 		{
 			if (poissonDiskSampling == null)
@@ -41,7 +30,8 @@ namespace PoissonDisk.Unity
 			poissonDiskSampling.CustomStartPoint = new Point2D(customStartPoint.x, customStartPoint.y);
 
 			poissonDiskSampling.ComputePoints(ref points);
-			GenerateTexture();
+
+			GetComponent<MeshRenderer>().sharedMaterial.mainTexture = PoissonDiskUtility.GenerateTexture(points, areaWidth, areaHeight, 256);
 		}
 
 		private void OnValidate()

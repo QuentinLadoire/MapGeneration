@@ -13,16 +13,16 @@ namespace PoissonDisk
             this.x = x;
             this.y = y;
         }
-    }
+		public override string ToString()
+		{
+            return "(" + x + ", " + y + ")";
+		}
+	}
 
     public enum StartPointPickMode
 	{
         Random,
         Center,
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight,
         Custom
 	}
 
@@ -47,9 +47,10 @@ namespace PoissonDisk
         public float AreaHeight { get; set; } = 30.0f;
         public int SampleLimitBeforeRejection { get; set; } = 30;
         public int Seed { get => seed; set => SetSeed(value); }
+        public bool CreateHull { get; set; } = false;
 
         public Point2D CustomStartPoint { get; set; } = new Point2D(0.0f, 0.0f);
-        public StartPointPickMode StartPointPickMode { get; set; } = StartPointPickMode.Random;
+        public StartPointPickMode StartPointPickMode { get; set; } = StartPointPickMode.Center;
 
         private int CeilToInt(float value)
         {
@@ -109,68 +110,71 @@ namespace PoissonDisk
             return true;
         }
 
-        private void Initialize()
-        {
-            //Determine Grid Size
-            cellSize = Radius / Sqrt2;
-            gridWidth = CeilToInt(AreaWidth / cellSize);
-            gridHeight = CeilToInt(AreaHeight / cellSize);
-
-            //Initialize Grid and List
-            grid = new int[gridWidth, gridHeight];
-            grid.Fill(-1);
-
-            outputPointList.Clear();
-            processingPointQueue.Clear();
-        }
-        private Point2D PickStartPoint()
-		{
-            //Return a point according to the Pickmode
-            return StartPointPickMode switch
-			{
-				StartPointPickMode.Random => new Point2D
-                {
-                    x = (float)(AreaWidth * random.NextDouble()),
-                    y = (float)(AreaHeight * random.NextDouble())
-                },
-				StartPointPickMode.Center => new Point2D
-                {
-                    x = AreaWidth * 0.5f,
-                    y = AreaHeight * 0.5f
-                },
-				StartPointPickMode.TopLeft => new Point2D
-                {
-                    x = 0.0f,
-                    y = AreaHeight
-                },
-				StartPointPickMode.TopRight => new Point2D
-                {
-                    x = AreaWidth,
-                    y = AreaHeight
-                },
-				StartPointPickMode.BottomLeft => new Point2D
-                {
-                    x = 0.0f,
-                    y = 0.0f
-                },
-				StartPointPickMode.BottomRight => new Point2D
-                {
-                    x = AreaWidth,
-                    y = 0.0f
-                },
-				StartPointPickMode.Custom => CustomStartPoint,
-				_ => new Point2D()//never happen
-			};
-		}
-        private void AddNewPoint(Point2D point)
+        private void AddNewPoint(Point2D point, bool process = true)
 		{
             //Add the start point to the output list, processing list and grid
             outputPointList.Add(point);
-            processingPointQueue.Enqueue(outputPointList.Count - 1);
+            if (process)
+                processingPointQueue.Enqueue(outputPointList.Count - 1);
 
             var gridX = FloorToInt(point.x / cellSize);
             var gridY = FloorToInt(point.y / cellSize);
             grid[gridX, gridY] = outputPointList.Count - 1;
+		}
+        private void MakeHull()
+		{
+            //Determine the hull division
+            var countX = (int)(AreaWidth / Radius) + 1;
+            var countY = (int)(AreaHeight / Radius) + 1;
+
+            var ratioX = AreaWidth / (countX - 1);
+            var ratioY = AreaHeight / (countY - 1);
+
+            for (int i = 0; i < countX; i++)
+			{
+                if (i == 0 || i == countX - 1) //Create vertical hull edge
+                {
+                    for (int j = 0; j < countY; j++)
+					{
+                        AddNewPoint(new Point2D
+                        {
+                            x = ratioX * i,
+                            y = ratioY * j
+                        }, false);
+					}
+                }
+                else //Create horizontal hull edge
+                {
+                    AddNewPoint(new Point2D
+                    {
+                        x = ratioX * i,
+                        y = 0.0f
+                    }, false);
+                    AddNewPoint(new Point2D
+                    {
+                        x = ratioX * i,
+                        y = AreaHeight
+                    }, false);
+                }
+            }
+		}
+        private Point2D PickStartingPoint()
+		{
+            return StartPointPickMode switch
+			{
+                StartPointPickMode.Random => new Point2D
+                {
+                    x = (float)(AreaWidth * random.NextDouble()),
+                    y = (float)(AreaHeight * random.NextDouble())
+                },
+                StartPointPickMode.Center => new Point2D
+                {
+                    x = AreaWidth * 0.5f,
+                    y = AreaHeight * 0.5f
+                },
+                StartPointPickMode.Custom => CustomStartPoint,
+                _ => new Point2D() //Never happen
+                };
 		}
         private Point2D PickRandomPoint(Point2D point)
 		{
@@ -185,23 +189,23 @@ namespace PoissonDisk
                 y = point.y + distance * (float)Math.Sin(angle)
             };
         }
-        private void Reset()
-		{
-            random = new Random(Seed);
 
-            grid = null;
+        private void Initialize()
+        {
+            //Determine Grid Size
+            cellSize = Radius / Sqrt2;
+            gridWidth = CeilToInt(AreaWidth / cellSize);
+            gridHeight = CeilToInt(AreaHeight / cellSize);
+
+            //Initialize Grid and List
+            grid = new int[gridWidth, gridHeight];
+            grid.Fill(-1);
+
             outputPointList.Clear();
             processingPointQueue.Clear();
         }
-
-        public void ComputePoints(ref Point2D[] points)
-        {
-            Initialize();
-
-            //Pick and Add the starting point of the process 
-            var startPoint = PickStartPoint();
-            AddNewPoint(startPoint);
-
+        private void Process()
+		{
             //Process
             while (processingPointQueue.Count > 0)
             {
@@ -223,9 +227,31 @@ namespace PoissonDisk
                     }
                 }
             }
+        }
+        private void Reset()
+		{
+            random = new Random(Seed);
+
+            grid = null;
+            outputPointList.Clear();
+            processingPointQueue.Clear();
+        }
+
+        public void ComputePoints(ref Point2D[] outputPoints)
+        {
+            Initialize();
+
+            //Pick and Add the starting point of the process 
+            var startingPoint = PickStartingPoint();
+            AddNewPoint(startingPoint);
+
+            if (CreateHull)
+                MakeHull();
+
+            Process();
 
             //Set the ref points array
-            points = outputPointList.ToArray();
+            outputPoints = outputPointList.ToArray();
 
             Reset();
         }
