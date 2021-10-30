@@ -4,150 +4,6 @@ using PoissonDisk;
 
 namespace Delaunay
 {
-	/// <summary>
-	/// A single node in the triangle tree.
-	///
-	/// All parameters are indexes.
-	/// </summary>
-	struct TriangleNode
-	{
-		// The points of the triangle
-		public int P0;
-		public int P1;
-		public int P2;
-
-		// The child triangles of this triangle in the tree
-		//
-		// A value of -1 means "no child"
-		public int C0;
-		public int C1;
-		public int C2;
-
-		// The triangles adjacent to this triangle
-		//
-		// A0 is the adjacent triangle opposite to the P0 point (i.e. the A0
-		// triangle has (P1, P2) as an edge.
-		//
-		// A value of -1 means "no adjacent triangle" (only true for
-		// triangles with one edge on the bounding triangle).
-		public int A0;
-		public int A1;
-		public int A2;
-
-		// Is this a leaf triangle?
-		public bool IsLeaf
-		{
-			get
-			{
-				return C0 < 0 && C1 < 0 && C2 < 0;
-			}
-		}
-
-		/// <summary>
-		/// Is this an "inner" triangle, part of the final triangulation, or
-		/// is some part of this triangle connected to the bounding triangle.
-		/// </summary>
-		public bool IsInner
-		{
-			get
-			{
-				return P0 >= 0 && P1 >= 0 && P2 >= 0;
-			}
-		}
-
-		public TriangleNode(int P0, int P1, int P2)
-		{
-			this.P0 = P0;
-			this.P1 = P1;
-			this.P2 = P2;
-
-			this.C0 = -1;
-			this.C1 = -1;
-			this.C2 = -1;
-
-			this.A0 = -1;
-			this.A1 = -1;
-			this.A2 = -1;
-		}
-
-
-		/// <summary>
-		/// Does this triangle contain this edge?
-		/// </summary>
-		public bool HasEdge(int e0, int e1)
-		{
-			if (e0 == P0)
-			{
-				return e1 == P1 || e1 == P2;
-			}
-			else if (e0 == P1)
-			{
-				return e1 == P0 || e1 == P2;
-			}
-			else if (e0 == P2)
-			{
-				return e1 == P0 || e1 == P1;
-			}
-
-			return false;
-		}
-
-
-		/// <summary>
-		/// Assuming p0 and p1 are one of P0 and P1, return the third point.
-		/// </summary>
-		public int OtherPoint(int p0, int p1)
-		{
-			if (p0 == P0)
-			{
-				if (p1 == P1) return P2;
-				if (p1 == P2) return P1;
-				throw new ArgumentException("p0 and p1 not on triangle");
-			}
-			if (p0 == P1)
-			{
-				if (p1 == P0) return P2;
-				if (p1 == P2) return P0;
-				throw new ArgumentException("p0 and p1 not on triangle");
-			}
-			if (p0 == P2)
-			{
-				if (p1 == P0) return P1;
-				if (p1 == P1) return P0;
-				throw new ArgumentException("p0 and p1 not on triangle");
-			}
-
-			throw new ArgumentException("p0 and p1 not on triangle");
-		}
-
-
-		/// <summary>
-		/// Get the triangle opposite a certain point.
-		/// </summary>
-		public int Opposite(int p)
-		{
-			if (p == P0) return A0;
-			if (p == P1) return A1;
-			if (p == P2) return A2;
-			throw new ArgumentException("p not in triangle");
-		}
-
-		/// <summary>
-		/// For debugging purposes.
-		/// </summary>
-		public override string ToString()
-		{
-			if (IsLeaf)
-			{
-				return string.Format("TriangleNode({0}, {1}, {2})", P0, P1, P2);
-			}
-			else
-			{
-				return string.Format("TriangleNode({0}, {1}, {2}, {3}, {4}, {5})", P0, P1, P2, C0, C1, C2);
-			}
-		}
-	}
-
 	public static class Utility
     {
 		/// <summary>
@@ -186,69 +42,129 @@ namespace Delaunay
         }
     }
 
-    public class DelaunayTriangulation
-    {
-		/// <summary>
-		/// List of vertices that make up the triangulation
-		/// </summary>
-		public readonly List<Point2D> Vertices;
-
-		/// <summary>
-		/// List of triangles that make up the triangulation. The elements index
-		/// the Vertices array. 
-		/// </summary>
-		public readonly List<int> Triangles;
-
-		internal DelaunayTriangulation()
-		{
-			Vertices = new List<Point2D>();
-			Triangles = new List<int>();
-		}
-
-		internal void Clear()
-		{
-			Vertices.Clear();
-			Triangles.Clear();
-		}
-
-		/// <summary>
-		/// Verify that this is an actual Delaunay triangulation
-		/// </summary>
-		public bool Verify()
-		{
-			try
-			{
-				for (int i = 0; i < Triangles.Count; i += 3)
-				{
-					var c0 = Vertices[Triangles[i]];
-					var c1 = Vertices[Triangles[i + 1]];
-					var c2 = Vertices[Triangles[i + 2]];
-
-					for (int j = 0; j < Vertices.Count; j++)
-					{
-						var p = Vertices[j];
-						if (Utility.InsideCircumCircle(p, c0, c1, c2))
-						{
-							return false;
-						}
-					}
-				}
-
-				return true;
-			}
-			catch
-			{
-				return false;
-			}
-		}
-	}
-
     public class DelaunayCalculator
     {
-		int highest = -1;
+		/// <summary>
+		/// A single node in the triangle tree.
+		///
+		/// All parameters are indexes.
+		/// </summary>
+		struct TriangleNode
+		{
+			// The points of the triangle
+			public int P0;
+			public int P1;
+			public int P2;
 
-		Point2D[] verts = null;
-		List<TriangleNode> triangles = new List<TriangleNode>();
+			// The child triangles of this triangle in the tree
+			//
+			// A value of -1 means "no child"
+			public int C0;
+			public int C1;
+			public int C2;
+
+			// The triangles adjacent to this triangle
+			//
+			// A0 is the adjacent triangle opposite to the P0 point (i.e. the A0
+			// triangle has (P1, P2) as an edge.
+			//
+			// A value of -1 means "no adjacent triangle" (only true for
+			// triangles with one edge on the bounding triangle).
+			public int A0;
+			public int A1;
+			public int A2;
+
+			/// <summary>
+			/// Is this a leaf triangle?
+			/// </summary>
+			public bool IsLeaf => C0 < 0 && C1 < 0 && C2 < 0;
+
+			/// <summary>
+			/// Is this an "inner" triangle, part of the final triangulation, or
+			/// is some part of this triangle connected to the bounding triangle.
+			/// </summary>
+			public bool IsInner => P0 >= 0 && P1 >= 0 && P2 >= 0;
+
+			public TriangleNode(int P0, int P1, int P2)
+			{
+				this.P0 = P0;
+				this.P1 = P1;
+				this.P2 = P2;
+
+				this.C0 = -1;
+				this.C1 = -1;
+				this.C2 = -1;
+
+				this.A0 = -1;
+				this.A1 = -1;
+				this.A2 = -1;
+			}
+
+			/// <summary>
+			/// Does this triangle contain this edge?
+			/// </summary>
+			public bool HasEdge(int e0, int e1)
+			{
+				if (e0 == P0) return e1 == P1 || e1 == P2;
+				else if (e0 == P1) return e1 == P0 || e1 == P2;
+				else if (e0 == P2) return e1 == P0 || e1 == P1;
+
+				return false;
+			}
+
+			/// <summary>
+			/// Assuming p0 and p1 are one of P0 and P1, return the third point.
+			/// </summary>
+			public int OtherPoint(int p0, int p1)
+			{
+				if (p0 == P0)
+				{
+					if (p1 == P1) return P2;
+					if (p1 == P2) return P1;
+					throw new ArgumentException("p0 and p1 not on triangle");
+				}
+				if (p0 == P1)
+				{
+					if (p1 == P0) return P2;
+					if (p1 == P2) return P0;
+					throw new ArgumentException("p0 and p1 not on triangle");
+				}
+				if (p0 == P2)
+				{
+					if (p1 == P0) return P1;
+					if (p1 == P1) return P0;
+					throw new ArgumentException("p0 and p1 not on triangle");
+				}
+
+				throw new ArgumentException("p0 and p1 not on triangle");
+			}
+
+			/// <summary>
+			/// Get the triangle opposite a certain point.
+			/// </summary>
+			public int Opposite(int p)
+			{
+				if (p == P0) return A0;
+				if (p == P1) return A1;
+				if (p == P2) return A2;
+				throw new ArgumentException("p not in triangle");
+			}
+
+			/// <summary>
+			/// For debugging purposes.
+			/// </summary>
+			public override string ToString()
+			{
+				if (IsLeaf)
+					return string.Format("TriangleNode({0}, {1}, {2})", P0, P1, P2);
+				else
+					return string.Format("TriangleNode({0}, {1}, {2}, {3}, {4}, {5})", P0, P1, P2, C0, C1, C2);
+			}
+		}
+
+		private int highest = -1;
+		private Point2D[] points = null;
+		private List<TriangleNode> triangles = new List<TriangleNode>();
 
 		private bool Higher(int pi0, int pi1)
 		{
@@ -258,21 +174,10 @@ namespace Delaunay
 			else if (pi1 == -1)	return false;
 			else
 			{
-				var p0 = verts[pi0];
-				var p1 = verts[pi1];
+				var p0 = points[pi0];
+				var p1 = points[pi1];
 
-				if (p0.y < p1.y)
-				{
-					return true;
-				}
-				else if (p0.y > p1.y)
-				{
-					return false;
-				}
-				else
-				{
-					return p0.x < p1.x;
-				}
+				return p0.y < p1.y || (p0.y == p1.y && p0.x < p1.x);
 			}
 		}
 
@@ -281,26 +186,12 @@ namespace Delaunay
 		/// </summary>
 		private bool ToTheLeft(int pi, int li0, int li1)
 		{
-			if (li0 == -2)
-			{
-				return Higher(li1, pi);
-			}
-			else if (li0 == -1)
-			{
-				return Higher(pi, li1);
-			}
-			else if (li1 == -2)
-			{
-				return Higher(pi, li0);
-			}
-			else if (li1 == -1)
-			{
-				return Higher(li0, pi);
-			}
-			else
-			{
-				return Utility.ToTheLeft(verts[pi], verts[li0], verts[li1]);
-			}
+			if      (li0 == -2) return Higher(li1, pi);
+			else if (li0 == -1) return Higher(pi, li1);
+			else if (li1 == -2) return Higher(pi, li0);
+			else if (li1 == -1) return Higher(li0, pi);
+			else 
+				return Utility.ToTheLeft(points[pi], points[li0], points[li1]);
 		}
 
 		/// <summary>
@@ -320,23 +211,15 @@ namespace Delaunay
 		private int FindTriangleNode(int pi)
 		{
 			var curr = 0;
-
 			while (!triangles[curr].IsLeaf)
 			{
 				var t = triangles[curr];
-
 				if (t.C0 >= 0 && PointInTriangle(pi, t.C0))
-				{
 					curr = t.C0;
-				}
 				else if (t.C1 >= 0 && PointInTriangle(pi, t.C1))
-				{
 					curr = t.C1;
-				}
 				else
-				{
 					curr = t.C2;
-				}
 			}
 
 			return curr;
@@ -357,23 +240,12 @@ namespace Delaunay
 			while (!triangles[ti].IsLeaf)
 			{
 				var t = triangles[ti];
-
 				if (t.C0 != -1 && triangles[t.C0].HasEdge(e0, e1))
-				{
 					ti = t.C0;
-				}
 				else if (t.C1 != -1 && triangles[t.C1].HasEdge(e0, e1))
-				{
 					ti = t.C1;
-				}
 				else if (t.C2 != -1 && triangles[t.C2].HasEdge(e0, e1))
-				{
 					ti = t.C2;
-				}
-				else
-				{
-					throw new System.Exception("This should never happen");
-				}
 			}
 
 			return ti;
@@ -394,26 +266,26 @@ namespace Delaunay
 			}
 			else if (iMagic)
 			{
-				var p = verts[l];
-				var l0 = verts[k];
-				var l1 = verts[j];
+				var p = points[l];
+				var l0 = points[k];
+				var l1 = points[j];
 
 				return Utility.ToTheLeft(p, l0, l1);
 			}
 			else if (jMagic)
 			{
-				var p = verts[l];
-				var l0 = verts[k];
-				var l1 = verts[i];
+				var p = points[l];
+				var l0 = points[k];
+				var l1 = points[i];
 
 				return !Utility.ToTheLeft(p, l0, l1);
 			}
 			else
 			{
-				var p = verts[l];
-				var c0 = verts[k];
-				var c1 = verts[i];
-				var c2 = verts[j];
+				var p = points[l];
+				var c0 = points[k];
+				var c1 = points[i];
+				var c2 = points[j];
 
 				return !Utility.InsideCircumCircle(p, c0, c1, c2);
 			}
@@ -485,7 +357,7 @@ namespace Delaunay
 			// For each point, find the containing triangle, split it into three
 			// new triangles, call LegalizeEdge on all edges opposite the newly
 			// inserted points
-			for (int i = 0; i < verts.Length; i++)
+			for (int i = 0; i < points.Length; i++)
 			{
 				var pi = i;
 
@@ -547,31 +419,30 @@ namespace Delaunay
 		/// <summary>
 		/// Filter the points array and triangle tree into a readable result.
 		/// </summary>
-		void GenerateResult(ref DelaunayTriangulation result)
+		void GenerateResult(out DelaunayTriangulation result, bool clockWise)
 		{
-			if (result == null)
+			var tmp = new List<int>();
+			for (int i = 0; i < this.triangles.Count; i++)
 			{
-				result = new DelaunayTriangulation();
-			}
-
-			result.Clear();
-
-			for (int i = 0; i < verts.Length; i++)
-			{
-				result.Vertices.Add(verts[i]);
-			}
-
-			for (int i = 1; i < triangles.Count; i++)
-			{
-				var t = triangles[i];
-
-				if (t.IsLeaf && t.IsInner)
+				var triangle = triangles[i];
+				if (triangle.IsLeaf && triangle.IsInner)
 				{
-					result.Triangles.Add(t.P0);
-					result.Triangles.Add(t.P1);
-					result.Triangles.Add(t.P2);
+					if (clockWise)
+					{
+						tmp.Add(triangle.P0);
+						tmp.Add(triangle.P2);
+						tmp.Add(triangle.P1);
+					}
+					else
+					{
+						tmp.Add(triangle.P0);
+						tmp.Add(triangle.P1);
+						tmp.Add(triangle.P2);
+					}
 				}
 			}
+
+			result = new DelaunayTriangulation(points, tmp.ToArray());
 		}
 
 		/// <summary>
@@ -582,7 +453,7 @@ namespace Delaunay
 		/// </summary>
 		/// <param name="verts">List of vertices to use for calculation</param>
 		/// <param name="result">Result object to store the triangulation in</param>
-		public void CalculateTriangulation(Point2D[] verts, ref DelaunayTriangulation result)
+		public void CalculateTriangulation(Point2D[] verts, out DelaunayTriangulation result, bool clockWise = false)
 		{
 			if (verts == null)
 				throw new ArgumentNullException("points");
@@ -591,7 +462,7 @@ namespace Delaunay
 				throw new ArgumentException("You need at least 3 points for a triangulation");
 
 			triangles.Clear();
-			this.verts = verts;
+			this.points = verts;
 
 			highest = 0;
 
@@ -603,9 +474,9 @@ namespace Delaunay
 			triangles.Add(new TriangleNode(-2, -1, highest));
 
 			RunBowyerWatson();
-			GenerateResult(ref result);
+			GenerateResult(out result, clockWise);
 
-			this.verts = null;
+			this.points = null;
 		}
 	}
 }
