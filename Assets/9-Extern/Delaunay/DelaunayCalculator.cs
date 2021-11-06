@@ -6,6 +6,8 @@ namespace Delaunay
 {
 	public static class Utility
     {
+		private const float oneThird = 1.0f / 3.0f;
+
 		/// <summary>
 		/// Is point p to the left of the line from l0 to l1?
 		/// </summary>
@@ -40,6 +42,46 @@ namespace Delaunay
 
             return determinant > 0.0f;
         }
+
+		/// <summary>
+		/// Return the triangle barycenter for triangle defined by p0, p1 and p2
+		/// </summary>
+		public static Point2D CalculateBarycenter(Point2D p0, Point2D p1, Point2D p2)
+		{
+			var bary = new Point2D
+			{
+				x = (p0.x + p1.x + p2.x) * oneThird,
+				y = (p0.y + p1.y + p2.y) * oneThird
+			};
+
+			return bary;
+		}
+
+		/// <summary>
+		/// Returns the center of the circumcircle defined by p0, p1 and p2
+		/// </summary>
+		public static Point2D CalculateCircumcenter(Point2D p0, Point2D p1, Point2D p2)
+		{
+			var x0 = p1.x - p0.x;
+			var y0 = p1.y - p0.y;
+			var x1 = p2.x - p0.x;
+			var y1 = p2.y - p0.y;
+
+			var bl = x0 * x0 + y0 * y0;
+			var cl = x1 * x1 + y1 * y1;
+			var d = 0.5f / (x0 * y1 - y0 * x1);
+
+			var x = p0.x + (y1 * bl - y0 * cl) * d;
+			var y = p0.y + (x0 * cl - x1 * bl) * d;
+
+			var circumcenter = new Point2D
+			{
+				x = x,
+				y = y
+			};
+
+			return circumcenter;
+		}
     }
 
     public class DelaunayCalculator
