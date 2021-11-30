@@ -1,4 +1,5 @@
 using UnityEngine;
+using Miscellaneous;
 
 namespace PoissonDisk.Unity
 {

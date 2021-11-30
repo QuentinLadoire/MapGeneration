@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using PoissonDisk;
+using Miscellaneous;
 
 namespace Delaunay
 {
