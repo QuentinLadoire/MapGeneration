@@ -4,7 +4,7 @@ using UnityEngine;
 using Miscellaneous;
 using Miscellaneous.Unity;
 using PoissonDisk;
-using Delaunay;
+using DelaunayVoronoi;
 
 [ExecuteAlways]
 public class MapGenerator : MonoBehaviour
@@ -15,21 +15,45 @@ public class MapGenerator : MonoBehaviour
 	[SerializeField] private int sampleLimitBeforeRejection = 30;
 	[SerializeField] private Vector2 areaSize = new Vector2(30.0f, 30.0f);
 
-	[Header("Render Settings")]
-	[SerializeField] private bool renderMesh = false;
-	[SerializeField] private bool renderPoints = false;
-	[SerializeField] private bool renderHalfEdge = false;
-	[SerializeField] private bool renderBarycenter = false;
-	[SerializeField] private bool renderCircumcenter = false;
+	[Header("Diagram Setting")]
+	[SerializeField] private bool fromBarycenter = false;
 
-	private Point2D[] points = null;
+	[Header("Render Settings")]
+	[SerializeField] private bool renderDelaunayMesh = false;
+	[SerializeField] private bool renderDelaunayPoints = false;
+	[SerializeField] private bool renderDelaunayHalfEdge = false;
+	[SerializeField] private bool renderDelaunayBarycenter = false;
+	[SerializeField] private bool renderDelaunayCircumcenter = false;
+
+	[SerializeField] private bool renderVoronoiSite = false;
+	[SerializeField] private bool renderVoronoiPoint = false;
+	[SerializeField] private bool renderVoronoiHalfEdge = false;
+
+	private VoronoiDiagram diagram = null;
 	private DelaunayTriangulation triangulation = null;
+	private VoronoiCalculator voronoiCalculator = new VoronoiCalculator();
 	private DelaunayCalculator delaunayCalculator = new DelaunayCalculator();
 	private PoissonDiskSampling poissonDiskSampling = new PoissonDiskSampling();
 
 	private MeshFilter meshFilter = null;
 	private MeshRenderer meshRenderer = null;
 
+	private void GenerateData()
+	{
+		poissonDiskSampling.Seed = seed;
+		poissonDiskSampling.Radius = radius;
+		poissonDiskSampling.AreaWidth = areaSize.x;
+		poissonDiskSampling.AreaHeight = areaSize.y;
+		poissonDiskSampling.SampleLimitBeforeRejection = sampleLimitBeforeRejection;
+
+		Point2D[] points;
+		poissonDiskSampling.ComputePoints(out points);
+
+		delaunayCalculator.CalculateTriangulation(points, out triangulation, true);
+		triangulation.CalculateDataStruct();
+
+		voronoiCalculator.CalculateDiagram(triangulation, out diagram, fromBarycenter);
+	}
 	private void CreateMesh()
 	{
 		var vertices = new Vector3[triangulation.points.Length];
@@ -58,7 +82,7 @@ public class MapGenerator : MonoBehaviour
 		meshFilter.mesh = mesh;
 	}
 
-	private void DrawPoints()
+	private void DrawDelaunayPoints()
 	{
 		for (int i = 0; i < triangulation.points.Length; i++)
 		{
@@ -69,18 +93,18 @@ public class MapGenerator : MonoBehaviour
 			Gizmos.DrawSphere(point.ToVector3(), 0.1f);
 		}
 	}
-	private void DrawHalfEdges()
+	private void DrawDelaunayHalfEdges()
 	{
 		for (int i = 0; i < triangulation.halfEdges.Length; i++)
 		{
 			var halfEdge = triangulation.halfEdges[i];
 
-			Gizmos.color = Color.black;
+			Gizmos.color = Color.gray;
 			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
 			Gizmos.DrawLine(triangulation.points[halfEdge.pi0].ToVector3(), triangulation.points[halfEdge.pi1].ToVector3());
 		}
 	}
-	private void DrawBarycenters()
+	private void DrawDelaunayBarycenters()
 	{
 		for (int i = 0; i < triangulation.barycenters.Length; i++)
 		{
@@ -91,7 +115,7 @@ public class MapGenerator : MonoBehaviour
 			Gizmos.DrawSphere(barycenter.ToVector3(), 0.1f);
 		}
 	}
-	private void DrawCircumcenters()
+	private void DrawDelaunayCircumcenters()
 	{
 		for (int i = 0; i < triangulation.circumcenters.Length; i++)
 		{
@@ -103,26 +127,58 @@ public class MapGenerator : MonoBehaviour
 		}
 	}
 
-	public void GenerateData()
+	private void DrawVoronoiSites()
 	{
-		poissonDiskSampling.Seed = seed;
-		poissonDiskSampling.Radius = radius;
-		poissonDiskSampling.AreaWidth = areaSize.x;
-		poissonDiskSampling.AreaHeight = areaSize.y;
-		poissonDiskSampling.SampleLimitBeforeRejection = sampleLimitBeforeRejection;
+		for (int i = 0; i < diagram.sites.Length; i++)
+		{
+			var site = diagram.sites[i];
 
-		poissonDiskSampling.ComputePoints(ref points);
-		delaunayCalculator.CalculateTriangulation(points, out triangulation, true);
-		triangulation.CalculateDataStruct();
-
-		Debug.Log(string.Format("Triangulation - Triangles count : {0} - HalfEdges count : {1}", triangulation.triangles.Length, triangulation.halfEdges.Length));
+			Gizmos.color = Color.red;
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.DrawSphere(site.ToVector3(), 0.1f);
+		}
 	}
+	private void DrawVoronoiPoints()
+	{
+		for (int i = 0; i < diagram.points.Length; i++)
+		{
+			var point = diagram.points[i];
+
+			Gizmos.color = Color.blue;
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.DrawSphere(point.ToVector3(), 0.1f);
+		}
+	}
+	private void DrawVoronoiHalfEdges()
+	{
+		for (int i = 0; i < diagram.halfEdges.Length; i++)
+		{
+			var halfEdge = diagram.halfEdges[i];
+
+			Gizmos.color = Color.black;
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.DrawLine(diagram.points[halfEdge.pi0].ToVector3(), diagram.points[halfEdge.pi1].ToVector3());
+		}
+	}
+
 	public void Generate()
 	{
 		GenerateData();
 		CreateMesh();
 
-		meshRenderer.enabled = renderMesh;
+		meshRenderer.enabled = renderDelaunayMesh;
+	}
+	public string LogPointCount()
+	{
+		return string.Format("Point Count : {0}", triangulation.points.Length);
+	}
+	public string LogTriangleCount()
+	{
+		return string.Format("Triangle Count : {0}", triangulation.triangles.Length);
+	}
+	public string LogHalfEdgeCount()
+	{
+		return string.Format("HalfEdge Count : {0}", triangulation.halfEdges.Length);
 	}
 
 	private void Start()
@@ -137,16 +193,25 @@ public class MapGenerator : MonoBehaviour
 	}
 	private void OnDrawGizmos()
 	{
-		if (renderHalfEdge)
-			DrawHalfEdges();
+		if (renderDelaunayHalfEdge)
+			DrawDelaunayHalfEdges();
 
-		if (renderPoints)
-			DrawPoints();
+		if (renderVoronoiHalfEdge)
+			DrawVoronoiHalfEdges();
 
-		if (renderBarycenter)
-			DrawBarycenters();
+		if (renderDelaunayPoints)
+			DrawDelaunayPoints();
 
-		if (renderCircumcenter)
-			DrawCircumcenters();
+		if (renderDelaunayBarycenter)
+			DrawDelaunayBarycenters();
+
+		if (renderDelaunayCircumcenter)
+			DrawDelaunayCircumcenters();
+
+		if (renderVoronoiSite)
+			DrawVoronoiSites();
+
+		if (renderVoronoiPoint)
+			DrawVoronoiPoints();
 	}
 }
