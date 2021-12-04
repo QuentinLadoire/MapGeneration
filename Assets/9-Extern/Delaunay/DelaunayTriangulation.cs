@@ -1,30 +1,30 @@
 using System.Collections.Generic;
 using Miscellaneous;
 
-namespace Delaunay
+namespace DelaunayVoronoi
 {
-	public class HalfEdge
-	{
-		public int pi0 = -1;
-		public int pi1 = -1;
-
-		public int ti = -1;
-
-		public int ohei = -1;
-	}
-
-	public class Triangle
-	{
-		public int hei0 = -1;
-		public int hei1 = -1;
-		public int hei2 = -1;
-
-		public int cci = -1;
-		public int bci = -1;
-	}
-
 	public class DelaunayTriangulation
 	{
+		public class HalfEdge
+		{
+			public int pi0 = -1;
+			public int pi1 = -1;
+
+			public int ti = -1;
+
+			public int ohei = -1;
+		}
+
+		public class Triangle
+		{
+			public int hei0 = -1;
+			public int hei1 = -1;
+			public int hei2 = -1;
+
+			public int cci = -1;
+			public int bci = -1;
+		}
+
 		public Point2D[] points = null;
 		public int[] indices = null;
 

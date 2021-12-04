@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Miscellaneous;
 
-namespace Delaunay
+namespace DelaunayVoronoi
 {
 	public static class Utility
     {
