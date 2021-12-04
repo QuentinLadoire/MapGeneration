@@ -30,7 +30,7 @@ namespace PoissonDisk.Unity
 			poissonDiskSampling.StartPointPickMode = startPointPickMode;
 			poissonDiskSampling.CustomStartPoint = new Point2D(customStartPoint.x, customStartPoint.y);
 
-			poissonDiskSampling.ComputePoints(ref points);
+			poissonDiskSampling.ComputePoints(out points);
 
 			GetComponent<MeshRenderer>().sharedMaterial.mainTexture = PoissonDiskUtility.GenerateTexture(points, areaWidth, areaHeight, 256);
 		}

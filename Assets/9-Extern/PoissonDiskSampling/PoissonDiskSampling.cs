@@ -222,7 +222,7 @@ namespace PoissonDisk
             processingPointQueue.Clear();
         }
 
-        public void ComputePoints(ref Point2D[] outputPoints)
+        public void ComputePoints(out Point2D[] outputPoints)
         {
             Initialize();
 
@@ -235,7 +235,7 @@ namespace PoissonDisk
 
             Process();
 
-            //Set the ref points array
+            //Set the out points array
             outputPoints = outputPointList.ToArray();
 
             Reset();
