@@ -12,6 +12,7 @@ public class MapGenerator : MonoBehaviour
 	[Header("PoissonDisk Settings")]
 	[SerializeField] private int seed = 0;
 	[SerializeField] private float radius = 1.0f;
+	[SerializeField] private bool createHull = false;
 	[SerializeField] private int sampleLimitBeforeRejection = 30;
 	[SerializeField] private Vector2 areaSize = new Vector2(30.0f, 30.0f);
 
@@ -44,6 +45,7 @@ public class MapGenerator : MonoBehaviour
 		poissonDiskSampling.Radius = radius;
 		poissonDiskSampling.AreaWidth = areaSize.x;
 		poissonDiskSampling.AreaHeight = areaSize.y;
+		poissonDiskSampling.CreateHull = createHull;
 		poissonDiskSampling.SampleLimitBeforeRejection = sampleLimitBeforeRejection;
 
 		Point2D[] points;
@@ -166,6 +168,17 @@ public class MapGenerator : MonoBehaviour
 		GenerateData();
 		CreateMesh();
 
+		//var triangles = triangulation.triangles;
+		//for (int i = 0; i < triangles.Length; i++)
+		//{
+		//	var triangle = triangles[i];
+		//	var p0 = triangulation.points[triangulation.halfEdges[triangle.hei0].pi0];
+		//	var p1 = triangulation.points[triangulation.halfEdges[triangle.hei1].pi0];
+		//	var p2 = triangulation.points[triangulation.halfEdges[triangle.hei2].pi0];
+		//
+		//	Debug.Log(string.Format("Triangle {0} : P0{1} - P1{2} - P2{3}", i, p0, p1, p2));
+		//}
+
 		meshRenderer.enabled = renderDelaunayMesh;
 	}
 	public string LogPointCount()
@@ -181,6 +194,11 @@ public class MapGenerator : MonoBehaviour
 		return string.Format("HalfEdge Count : {0}", triangulation.halfEdges.Length);
 	}
 
+	private void Awake()
+	{
+		meshFilter = GetComponent<MeshFilter>();
+		meshRenderer = GetComponent<MeshRenderer>();
+	}
 	private void Start()
 	{
 		meshFilter = GetComponent<MeshFilter>();

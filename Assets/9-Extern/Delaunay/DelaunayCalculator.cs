@@ -24,6 +24,26 @@ namespace DelaunayVoronoi
 			return det >= 0;
 		}
 
+		public static bool OnAnEdge(Point2D p, Point2D l0, Point2D l1)
+		{
+			var v0x = l1.x - l0.x;
+			var v0y = l1.y - l0.y;
+
+			var v1x = p.x - l0.x;
+			var v1y = p.y - l0.y;
+
+			var det = (v0x * v1y) - (v0y * v1x);
+
+			return det == 0;
+		}
+
+		public static bool PointInTriangle(Point2D p, Point2D t0, Point2D t1, Point2D t2)
+		{
+			return ToTheLeft(p, t0, t1) &&
+				   ToTheLeft(p, t1, t2) &&
+				   ToTheLeft(p, t2, t0);
+		}
+
 		/// <summary>
 		/// Is point p inside the circumcircle formed by c0, c1 and c2?
 		/// </summary>
@@ -193,6 +213,14 @@ namespace DelaunayVoronoi
 			}
 
 			/// <summary>
+			/// Get the triangle Adjacent a certain edge.
+			/// </summary>
+			public int Adjacent(int p0, int p1)
+			{
+				return Opposite(OtherPoint(p0, p1));
+			}
+
+			/// <summary>
 			/// For debugging purposes.
 			/// </summary>
 			public override string ToString()
@@ -236,6 +264,16 @@ namespace DelaunayVoronoi
 				return Utility.ToTheLeft(points[pi], points[li0], points[li1]);
 		}
 
+		private bool OnTheEdge(int pi, int li0, int li1)
+		{
+			if		(li0 == -2) return false;
+			else if (li0 == -1) return false;
+			else if (li1 == -2) return false;
+			else if (li1 == -1) return false;
+			else
+				return Utility.OnAnEdge(points[pi], points[li0], points[li1]);
+		}
+
 		/// <summary>
 		/// Convenience method to check if a point is inside a certain triangle.
 		/// </summary>
@@ -265,6 +303,32 @@ namespace DelaunayVoronoi
 			}
 
 			return curr;
+		}
+
+		private bool PointIsOnTriangleEdges(int pi, int ti, out int ei0, out int ei1)
+		{
+			var t = triangles[ti];
+
+			ei0 = -1;
+			ei1 = -1;
+
+			if (OnTheEdge(pi, t.P0, t.P1))
+			{
+				ei0 = t.P0;
+				ei1 = t.P1;
+			}
+			else if (OnTheEdge(pi, t.P1, t.P2))
+			{
+				ei0 = t.P1;
+				ei1 = t.P2;
+			}
+			else if (OnTheEdge(pi, t.P2, t.P0))
+			{
+				ei0 = t.P2;
+				ei1 = t.P0;
+			}
+
+			return ei0 != -1;
 		}
 
 		/// <summary>
@@ -312,7 +376,7 @@ namespace DelaunayVoronoi
 				var l0 = points[k];
 				var l1 = points[j];
 
-				return Utility.ToTheLeft(p, l0, l1);
+				return Utility.OnAnEdge(p, l0, l1) || Utility.ToTheLeft(p, l0, l1);
 			}
 			else if (jMagic)
 			{
@@ -320,7 +384,7 @@ namespace DelaunayVoronoi
 				var l0 = points[k];
 				var l1 = points[i];
 
-				return !Utility.ToTheLeft(p, l0, l1);
+				return Utility.OnAnEdge(p, l0, l1) || !Utility.ToTheLeft(p, l0, l1);
 			}
 			else
 			{
@@ -391,6 +455,127 @@ namespace DelaunayVoronoi
 			}
 		}
 
+		private void ProcessWhenPointIsOnTriangleEdges(int pi, int ti, int ei0, int ei1)
+		{
+			var t = triangles[ti];
+
+			var p0 = t.P0; //ei1;
+			var p1 = t.P1; //t.OtherPoint(ei0, ei1);
+			var p2 = t.P2; //ei0;
+
+			// Indices of the newly created triangles.
+			var nti0 = triangles.Count;
+			var nti1 = nti0 + 1;
+
+			var nt0 = new TriangleNode(pi, p0, p1);
+			var nt1 = new TriangleNode(pi, p1, p2);
+
+			nt0.A0 = t.A2;
+			nt0.A1 = nti1;
+			nt0.A2 = t.A1;
+
+			nt1.A0 = t.A0;
+			nt1.A1 = t.A1;
+			nt1.A2 = nti0;
+
+			t.C0 = nti0;
+			t.C1 = nti1;
+
+			triangles[ti] = t;
+
+			triangles.Add(nt0);
+			triangles.Add(nt1);
+
+			var oti = t.A1; //t.Adjacent(ei0, ei1);
+			if (oti != -1)
+			{
+				oti = LeafWithEdge(oti, ei0, ei1);
+				var ot = triangles[oti];
+
+				var op0 = ot.P0; //ei0;					  
+				var op1 = ot.P1; //ot.OtherPoint(ei1, ei0);
+				var op2 = ot.P2; //ei1;                    
+
+				var onti0 = triangles.Count;
+				var onti1 = onti0 + 1;
+
+				var ont0 = new TriangleNode(pi, op1, op2);
+				var ont1 = new TriangleNode(pi, op2, op0);
+
+				ont0.A0 = ot.A0; //ot.Adjacent(op2, op0);
+				ont0.A1 = onti1; //ot.Adjacent(op0, op1);
+				ont0.A2 = ot.A2; //onti1;
+
+				ont1.A0 = ot.A1; //onti0;
+				ont1.A1 = ot.A2; //ot.Adjacent(op1, op2);
+				ont1.A2 = onti0; //ot.Adjacent(op2, op0);
+
+				ot.C0 = onti0;
+				ot.C1 = onti1;
+
+				triangles[oti] = ot;
+
+				triangles.Add(ont0);
+				triangles.Add(ont1);
+
+				if (ont0.A0 != -1) LegalizeEdge(onti0, ont0.A0, pi, op1, op2);
+				if (ont1.A0 != -1) LegalizeEdge(onti1, ont1.A0, pi, op2, op0);
+			}
+
+			if (nt0.A0 != -1) LegalizeEdge(nti0, nt0.A0, pi, p0, p1);
+			if (nt1.A0 != -1) LegalizeEdge(nti1, nt1.A0, pi, p1, p2);
+		}
+
+		private void ProcessWhenPointIsInTriangle(int pi, int ti)
+		{
+			var t = triangles[ti];
+
+			// The points of the containing triangle in CCW order
+			var p0 = t.P0;
+			var p1 = t.P1;
+			var p2 = t.P2;
+
+			// Indices of the newly created triangles.
+			var nti0 = triangles.Count;
+			var nti1 = nti0 + 1;
+			var nti2 = nti0 + 2;
+
+			// The new triangles! All in CCW order
+			var nt0 = new TriangleNode(pi, p0, p1);
+			var nt1 = new TriangleNode(pi, p1, p2);
+			var nt2 = new TriangleNode(pi, p2, p0);
+
+			// Setting the adjacency triangle references.  Only way to make
+			// sure you do this right is by drawing the triangles up on a
+			// piece of paper.
+			nt0.A0 = t.A2;
+			nt1.A0 = t.A0;
+			nt2.A0 = t.A1;
+
+			nt0.A1 = nti1;
+			nt1.A1 = nti2;
+			nt2.A1 = nti0;
+
+			nt0.A2 = nti2;
+			nt1.A2 = nti0;
+			nt2.A2 = nti1;
+
+			// The new triangles are the children of the old one.
+			t.C0 = nti0;
+			t.C1 = nti1;
+			t.C2 = nti2;
+
+			triangles[ti] = t;
+
+			triangles.Add(nt0);
+			triangles.Add(nt1);
+			triangles.Add(nt2);
+
+			if (nt0.A0 != -1) LegalizeEdge(nti0, nt0.A0, pi, p0, p1);
+			if (nt1.A0 != -1) LegalizeEdge(nti1, nt1.A0, pi, p1, p2);
+			if (nt2.A0 != -1) LegalizeEdge(nti2, nt2.A0, pi, p2, p0);
+		}
+
 		/// <summary>
 		/// Run the algorithm
 		/// </summary>
@@ -408,53 +593,15 @@ namespace DelaunayVoronoi
 				// Index of the containing triangle
 				var ti = FindTriangleNode(pi);
 
-				var t = triangles[ti];
+				if (i == 10)
+				{
+					int tmp = 0;
+				}
 
-				// The points of the containing triangle in CCW order
-				var p0 = t.P0;
-				var p1 = t.P1;
-				var p2 = t.P2;
-
-				// Indices of the newly created triangles.
-				var nti0 = triangles.Count;
-				var nti1 = nti0 + 1;
-				var nti2 = nti0 + 2;
-
-				// The new triangles! All in CCW order
-				var nt0 = new TriangleNode(pi, p0, p1);
-				var nt1 = new TriangleNode(pi, p1, p2);
-				var nt2 = new TriangleNode(pi, p2, p0);
-
-
-				// Setting the adjacency triangle references.  Only way to make
-				// sure you do this right is by drawing the triangles up on a
-				// piece of paper.
-				nt0.A0 = t.A2;
-				nt1.A0 = t.A0;
-				nt2.A0 = t.A1;
-
-				nt0.A1 = nti1;
-				nt1.A1 = nti2;
-				nt2.A1 = nti0;
-
-				nt0.A2 = nti2;
-				nt1.A2 = nti0;
-				nt2.A2 = nti1;
-
-				// The new triangles are the children of the old one.
-				t.C0 = nti0;
-				t.C1 = nti1;
-				t.C2 = nti2;
-
-				triangles[ti] = t;
-
-				triangles.Add(nt0);
-				triangles.Add(nt1);
-				triangles.Add(nt2);
-
-				if (nt0.A0 != -1) LegalizeEdge(nti0, nt0.A0, pi, p0, p1);
-				if (nt1.A0 != -1) LegalizeEdge(nti1, nt1.A0, pi, p1, p2);
-				if (nt2.A0 != -1) LegalizeEdge(nti2, nt2.A0, pi, p2, p0);
+				if (PointIsOnTriangleEdges(pi, ti, out int ei0, out int ei1))
+					ProcessWhenPointIsOnTriangleEdges(pi, ti, ei0, ei1);
+				else
+					ProcessWhenPointIsInTriangle(pi, ti);
 			}
 		}
 
