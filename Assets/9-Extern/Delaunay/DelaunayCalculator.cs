@@ -7,6 +7,7 @@ namespace DelaunayVoronoi
 	public static class Utility
     {
 		private const float oneThird = 1.0f / 3.0f;
+		private const float epsilon = 0.0001f;
 
 		/// <summary>
 		/// Is point p to the left of the line from l0 to l1?
@@ -21,7 +22,7 @@ namespace DelaunayVoronoi
 
 			var det = (v0x * v1y) - (v0y * v1x);
 
-			return det >= 0;
+			return det >= -epsilon;
 		}
 
 		public static bool OnAnEdge(Point2D p, Point2D l0, Point2D l1)
@@ -34,7 +35,14 @@ namespace DelaunayVoronoi
 
 			var det = (v0x * v1y) - (v0y * v1x);
 
-			return det == 0;
+			return det < epsilon && det > -epsilon;
+		}
+
+		public static bool PointOnAnTriangleEdge(Point2D p, Point2D t0, Point2D t1, Point2D t2)
+		{
+			return OnAnEdge(p, t0, t1) ||
+				   OnAnEdge(p, t1, t2) ||
+				   OnAnEdge(p, t2, t0);
 		}
 
 		public static bool PointInTriangle(Point2D p, Point2D t0, Point2D t1, Point2D t2)
@@ -376,7 +384,7 @@ namespace DelaunayVoronoi
 				var l0 = points[k];
 				var l1 = points[j];
 
-				return Utility.OnAnEdge(p, l0, l1) || Utility.ToTheLeft(p, l0, l1);
+				return Utility.ToTheLeft(p, l0, l1);
 			}
 			else if (jMagic)
 			{
@@ -459,9 +467,9 @@ namespace DelaunayVoronoi
 		{
 			var t = triangles[ti];
 
-			var p0 = t.P0; //ei1;
-			var p1 = t.P1; //t.OtherPoint(ei0, ei1);
-			var p2 = t.P2; //ei0;
+			var p0 = t.P0;
+			var p1 = t.P1;
+			var p2 = t.P2;
 
 			// Indices of the newly created triangles.
 			var nti0 = triangles.Count;
@@ -486,15 +494,15 @@ namespace DelaunayVoronoi
 			triangles.Add(nt0);
 			triangles.Add(nt1);
 
-			var oti = t.A1; //t.Adjacent(ei0, ei1);
+			var oti = t.A1;
 			if (oti != -1)
 			{
 				oti = LeafWithEdge(oti, ei0, ei1);
 				var ot = triangles[oti];
 
-				var op0 = ot.P0; //ei0;					  
-				var op1 = ot.P1; //ot.OtherPoint(ei1, ei0);
-				var op2 = ot.P2; //ei1;                    
+				var op0 = ot.P0;
+				var op1 = ot.P1;
+				var op2 = ot.P2;
 
 				var onti0 = triangles.Count;
 				var onti1 = onti0 + 1;
@@ -502,18 +510,24 @@ namespace DelaunayVoronoi
 				var ont0 = new TriangleNode(pi, op1, op2);
 				var ont1 = new TriangleNode(pi, op2, op0);
 
-				ont0.A0 = ot.A0; //ot.Adjacent(op2, op0);
-				ont0.A1 = onti1; //ot.Adjacent(op0, op1);
-				ont0.A2 = ot.A2; //onti1;
+				ont0.A0 = ot.A0;
+				ont0.A1 = onti1;
+				ont0.A2 = nti1; 
 
-				ont1.A0 = ot.A1; //onti0;
-				ont1.A1 = ot.A2; //ot.Adjacent(op1, op2);
-				ont1.A2 = onti0; //ot.Adjacent(op2, op0);
+				ont1.A0 = ot.A1;
+				ont1.A1 = nti0; 
+				ont1.A2 = onti0;
 
 				ot.C0 = onti0;
 				ot.C1 = onti1;
 
 				triangles[oti] = ot;
+
+				nt0.A2 = onti1;
+				nt1.A1 = onti0;
+
+				triangles[nti0] = nt0;
+				triangles[nti1] = nt1;
 
 				triangles.Add(ont0);
 				triangles.Add(ont1);
@@ -592,11 +606,6 @@ namespace DelaunayVoronoi
 
 				// Index of the containing triangle
 				var ti = FindTriangleNode(pi);
-
-				if (i == 10)
-				{
-					int tmp = 0;
-				}
 
 				if (PointIsOnTriangleEdges(pi, ti, out int ei0, out int ei1))
 					ProcessWhenPointIsOnTriangleEdges(pi, ti, ei0, ei1);

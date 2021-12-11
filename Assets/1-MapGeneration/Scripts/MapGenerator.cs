@@ -91,7 +91,7 @@ public class MapGenerator : MonoBehaviour
 			var point = triangulation.points[i];
 
 			Gizmos.color = Color.red;
-			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(transform.localScale.x, transform.localScale.y, 0.0f));
 			Gizmos.DrawSphere(point.ToVector3(), 0.1f);
 		}
 	}
@@ -102,7 +102,7 @@ public class MapGenerator : MonoBehaviour
 			var halfEdge = triangulation.halfEdges[i];
 
 			Gizmos.color = Color.gray;
-			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(transform.localScale.x, transform.localScale.y, 0.0f));
 			Gizmos.DrawLine(triangulation.points[halfEdge.pi0].ToVector3(), triangulation.points[halfEdge.pi1].ToVector3());
 		}
 	}
@@ -113,7 +113,7 @@ public class MapGenerator : MonoBehaviour
 			var barycenter = triangulation.barycenters[i];
 
 			Gizmos.color = Color.blue;
-			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(transform.localScale.x, transform.localScale.y, 0.0f));
 			Gizmos.DrawSphere(barycenter.ToVector3(), 0.1f);
 		}
 	}
@@ -124,7 +124,7 @@ public class MapGenerator : MonoBehaviour
 			var circumcenter = triangulation.circumcenters[i];
 
 			Gizmos.color = Color.green;
-			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(transform.localScale.x, transform.localScale.y, 0.0f));
 			Gizmos.DrawSphere(circumcenter.ToVector3(), 0.1f);
 		}
 	}
@@ -136,7 +136,7 @@ public class MapGenerator : MonoBehaviour
 			var site = diagram.sites[i];
 
 			Gizmos.color = Color.red;
-			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(transform.localScale.x, transform.localScale.y, 0.0f));
 			Gizmos.DrawSphere(site.ToVector3(), 0.1f);
 		}
 	}
@@ -147,7 +147,7 @@ public class MapGenerator : MonoBehaviour
 			var point = diagram.points[i];
 
 			Gizmos.color = Color.blue;
-			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(transform.localScale.x, transform.localScale.y, 0.0f));
 			Gizmos.DrawSphere(point.ToVector3(), 0.1f);
 		}
 	}
@@ -158,7 +158,7 @@ public class MapGenerator : MonoBehaviour
 			var halfEdge = diagram.halfEdges[i];
 
 			Gizmos.color = Color.black;
-			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(1.0f, 1.0f, 0.0f));
+			Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, new Vector3(transform.localScale.x, transform.localScale.y, 0.0f));
 			Gizmos.DrawLine(diagram.points[halfEdge.pi0].ToVector3(), diagram.points[halfEdge.pi1].ToVector3());
 		}
 	}
@@ -167,17 +167,6 @@ public class MapGenerator : MonoBehaviour
 	{
 		GenerateData();
 		CreateMesh();
-
-		//var triangles = triangulation.triangles;
-		//for (int i = 0; i < triangles.Length; i++)
-		//{
-		//	var triangle = triangles[i];
-		//	var p0 = triangulation.points[triangulation.halfEdges[triangle.hei0].pi0];
-		//	var p1 = triangulation.points[triangulation.halfEdges[triangle.hei1].pi0];
-		//	var p2 = triangulation.points[triangulation.halfEdges[triangle.hei2].pi0];
-		//
-		//	Debug.Log(string.Format("Triangle {0} : P0{1} - P1{2} - P2{3}", i, p0, p1, p2));
-		//}
 
 		meshRenderer.enabled = renderDelaunayMesh;
 	}
