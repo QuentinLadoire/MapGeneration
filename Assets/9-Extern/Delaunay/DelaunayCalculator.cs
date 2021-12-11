@@ -7,7 +7,7 @@ namespace DelaunayVoronoi
 	public static class Utility
     {
 		private const float oneThird = 1.0f / 3.0f;
-		private const float epsilon = 0.0001f;
+		private const float epsilon = 0.001f;
 
 		/// <summary>
 		/// Is point p to the left of the line from l0 to l1?

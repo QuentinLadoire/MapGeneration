@@ -13,14 +13,20 @@ public class MapGeneratorEditor : Editor
 		var target = this.target as MapGenerator;
 
 		EditorGUILayout.Space();
-		GUILayout.Label("Logs", EditorStyles.boldLabel);
-		GUILayout.Label(target.LogPointCount());
-		GUILayout.Label(target.LogTriangleCount());
-		GUILayout.Label(target.LogHalfEdgeCount());
 
 		if (GUILayout.Button("Generate"))
 		{
 			target.Generate();
+		}
+
+		EditorGUILayout.Space();
+
+		GUILayout.Label("Logs", EditorStyles.boldLabel);
+		if (target.Triangulation != null)
+		{
+			GUILayout.Label(target.LogPointCount());
+			GUILayout.Label(target.LogTriangleCount());
+			GUILayout.Label(target.LogHalfEdgeCount());
 		}
 	}
 }

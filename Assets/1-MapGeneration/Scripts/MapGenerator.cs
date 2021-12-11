@@ -30,6 +30,9 @@ public class MapGenerator : MonoBehaviour
 	[SerializeField] private bool renderVoronoiPoint = false;
 	[SerializeField] private bool renderVoronoiHalfEdge = false;
 
+	[Header("MapGenerator Setting")]
+	[SerializeField] private bool autoGenerate = false;
+
 	private VoronoiDiagram diagram = null;
 	private DelaunayTriangulation triangulation = null;
 	private VoronoiCalculator voronoiCalculator = new VoronoiCalculator();
@@ -38,6 +41,8 @@ public class MapGenerator : MonoBehaviour
 
 	private MeshFilter meshFilter = null;
 	private MeshRenderer meshRenderer = null;
+
+	public DelaunayTriangulation Triangulation => triangulation;
 
 	private void GenerateData()
 	{
@@ -196,29 +201,33 @@ public class MapGenerator : MonoBehaviour
 
 	private void OnValidate()
 	{
-		Generate();
+		if (autoGenerate)
+			Generate();
 	}
 	private void OnDrawGizmos()
 	{
-		if (renderDelaunayHalfEdge)
-			DrawDelaunayHalfEdges();
+		if (triangulation != null && diagram != null)
+		{
+			if (renderDelaunayHalfEdge)
+				DrawDelaunayHalfEdges();
 
-		if (renderVoronoiHalfEdge)
-			DrawVoronoiHalfEdges();
+			if (renderVoronoiHalfEdge)
+				DrawVoronoiHalfEdges();
 
-		if (renderDelaunayPoints)
-			DrawDelaunayPoints();
+			if (renderDelaunayPoints)
+				DrawDelaunayPoints();
 
-		if (renderDelaunayBarycenter)
-			DrawDelaunayBarycenters();
+			if (renderDelaunayBarycenter)
+				DrawDelaunayBarycenters();
 
-		if (renderDelaunayCircumcenter)
-			DrawDelaunayCircumcenters();
+			if (renderDelaunayCircumcenter)
+				DrawDelaunayCircumcenters();
 
-		if (renderVoronoiSite)
-			DrawVoronoiSites();
+			if (renderVoronoiSite)
+				DrawVoronoiSites();
 
-		if (renderVoronoiPoint)
-			DrawVoronoiPoints();
+			if (renderVoronoiPoint)
+				DrawVoronoiPoints();
+		}
 	}
 }
