@@ -9,9 +9,6 @@ namespace DelaunayVoronoi
 		private const float oneThird = 1.0f / 3.0f;
 		private const float epsilon = 0.001f;
 
-		/// <summary>
-		/// Is point p to the left of the line from l0 to l1?
-		/// </summary>
 		public static bool ToTheLeft(Point2D p, Point2D l0, Point2D l1)
 		{
 			var v0x = l1.x - l0.x;
@@ -24,7 +21,6 @@ namespace DelaunayVoronoi
 
 			return det >= -epsilon;
 		}
-
 		public static bool OnAnEdge(Point2D p, Point2D l0, Point2D l1)
 		{
 			var v0x = l1.x - l0.x;
@@ -38,6 +34,12 @@ namespace DelaunayVoronoi
 			return det < epsilon && det > -epsilon;
 		}
 
+		public static bool PointInTriangle(Point2D p, Point2D t0, Point2D t1, Point2D t2)
+		{
+			return ToTheLeft(p, t0, t1) &&
+				   ToTheLeft(p, t1, t2) &&
+				   ToTheLeft(p, t2, t0);
+		}
 		public static bool PointOnAnTriangleEdge(Point2D p, Point2D t0, Point2D t1, Point2D t2)
 		{
 			return OnAnEdge(p, t0, t1) ||
@@ -45,16 +47,6 @@ namespace DelaunayVoronoi
 				   OnAnEdge(p, t2, t0);
 		}
 
-		public static bool PointInTriangle(Point2D p, Point2D t0, Point2D t1, Point2D t2)
-		{
-			return ToTheLeft(p, t0, t1) &&
-				   ToTheLeft(p, t1, t2) &&
-				   ToTheLeft(p, t2, t0);
-		}
-
-		/// <summary>
-		/// Is point p inside the circumcircle formed by c0, c1 and c2?
-		/// </summary>
 		public static bool InsideCircumCircle(Point2D p, Point2D c0, Point2D c1, Point2D c2)
         {
             var ax = c0.x - p.x;
@@ -71,9 +63,6 @@ namespace DelaunayVoronoi
             return determinant > 0.0f;
         }
 
-		/// <summary>
-		/// Return the triangle barycenter for triangle defined by p0, p1 and p2
-		/// </summary>
 		public static Point2D CalculateBarycenter(Point2D p0, Point2D p1, Point2D p2)
 		{
 			var bary = new Point2D
@@ -84,10 +73,6 @@ namespace DelaunayVoronoi
 
 			return bary;
 		}
-
-		/// <summary>
-		/// Returns the center of the circumcircle defined by p0, p1 and p2
-		/// </summary>
 		public static Point2D CalculateCircumcenter(Point2D p0, Point2D p1, Point2D p2)
 		{
 			var x0 = p1.x - p0.x;
@@ -114,12 +99,7 @@ namespace DelaunayVoronoi
 
     public class DelaunayCalculator
     {
-		/// <summary>
-		/// A single node in the triangle tree.
-		///
-		/// All parameters are indexes.
-		/// </summary>
-		struct TriangleNode
+		private struct TriangleNode
 		{
 			// The points of the triangle
 			public int P0;
@@ -242,7 +222,7 @@ namespace DelaunayVoronoi
 
 		private int highest = -1;
 		private Point2D[] points = null;
-		private List<TriangleNode> triangles = new List<TriangleNode>();
+		private List<TriangleNode> triangleNodeList = new List<TriangleNode>();
 
 		private bool Higher(int pi0, int pi1)
 		{
@@ -259,9 +239,6 @@ namespace DelaunayVoronoi
 			}
 		}
 
-		/// <summary>
-		/// Is the point to the left of the edge?
-		/// </summary>
 		private bool ToTheLeft(int pi, int li0, int li1)
 		{
 			if      (li0 == -2) return Higher(li1, pi);
@@ -271,7 +248,6 @@ namespace DelaunayVoronoi
 			else 
 				return Utility.ToTheLeft(points[pi], points[li0], points[li1]);
 		}
-
 		private bool OnTheEdge(int pi, int li0, int li1)
 		{
 			if		(li0 == -2) return false;
@@ -282,40 +258,16 @@ namespace DelaunayVoronoi
 				return Utility.OnAnEdge(points[pi], points[li0], points[li1]);
 		}
 
-		/// <summary>
-		/// Convenience method to check if a point is inside a certain triangle.
-		/// </summary>
 		private bool PointInTriangle(int pi, int ti)
 		{
-			var t = triangles[ti];
+			var t = triangleNodeList[ti];
 			return ToTheLeft(pi, t.P0, t.P1)
 				&& ToTheLeft(pi, t.P1, t.P2)
 				&& ToTheLeft(pi, t.P2, t.P0);
 		}
-
-		/// <summary>
-		/// Find the leaf triangle in the triangle tree containing a certain point.
-		/// </summary>
-		private int FindTriangleNode(int pi)
-		{
-			var curr = 0;
-			while (!triangles[curr].IsLeaf)
-			{
-				var t = triangles[curr];
-				if (t.C0 >= 0 && PointInTriangle(pi, t.C0))
-					curr = t.C0;
-				else if (t.C1 >= 0 && PointInTriangle(pi, t.C1))
-					curr = t.C1;
-				else
-					curr = t.C2;
-			}
-
-			return curr;
-		}
-
 		private bool PointIsOnTriangleEdges(int pi, int ti, out int ei0, out int ei1)
 		{
-			var t = triangles[ti];
+			var t = triangleNodeList[ti];
 
 			ei0 = -1;
 			ei1 = -1;
@@ -340,6 +292,26 @@ namespace DelaunayVoronoi
 		}
 
 		/// <summary>
+		/// Find the leaf triangle in the triangle tree containing a certain point.
+		/// </summary>
+		private int FindTriangleNode(int pi)
+		{
+			var curr = 0;
+			while (!triangleNodeList[curr].IsLeaf)
+			{
+				var t = triangleNodeList[curr];
+				if (t.C0 >= 0 && PointInTriangle(pi, t.C0))
+					curr = t.C0;
+				else if (t.C1 >= 0 && PointInTriangle(pi, t.C1))
+					curr = t.C1;
+				else
+					curr = t.C2;
+			}
+
+			return curr;
+		}
+
+		/// <summary>
 		/// Find the leaf of the triangles[ti] subtree that contains a given
 		/// edge.
 		///
@@ -351,15 +323,17 @@ namespace DelaunayVoronoi
 		/// </summary>
 		int LeafWithEdge(int ti, int e0, int e1)
 		{
-			while (!triangles[ti].IsLeaf)
+			while (!triangleNodeList[ti].IsLeaf)
 			{
-				var t = triangles[ti];
-				if (t.C0 != -1 && triangles[t.C0].HasEdge(e0, e1))
+				var t = triangleNodeList[ti];
+				if (t.C0 != -1 && triangleNodeList[t.C0].HasEdge(e0, e1))
 					ti = t.C0;
-				else if (t.C1 != -1 && triangles[t.C1].HasEdge(e0, e1))
+				else if (t.C1 != -1 && triangleNodeList[t.C1].HasEdge(e0, e1))
 					ti = t.C1;
-				else if (t.C2 != -1 && triangles[t.C2].HasEdge(e0, e1))
+				else if (t.C2 != -1 && triangleNodeList[t.C2].HasEdge(e0, e1))
 					ti = t.C2;
+				else
+					throw new ArgumentException(string.Format("The triangle {0}, does not contain a Child with the edge ({1} - {2})", ti, e0, e1));
 			}
 
 			return ti;
@@ -423,13 +397,13 @@ namespace DelaunayVoronoi
 			// just created), so find the current correct leaf.
 			ti1 = LeafWithEdge(ti1, li0, li1);
 
-			var t0 = triangles[ti0];
-			var t1 = triangles[ti1];
+			var t0 = triangleNodeList[ti0];
+			var t1 = triangleNodeList[ti1];
 			var qi = t1.OtherPoint(li0, li1);
 
 			if (!LegalEdge(pi, qi, li0, li1))
 			{
-				var ti2 = triangles.Count;
+				var ti2 = triangleNodeList.Count;
 				var ti3 = ti2 + 1;
 
 				var t2 = new TriangleNode(pi, li0, qi);
@@ -443,11 +417,11 @@ namespace DelaunayVoronoi
 				t3.A1 = t0.Opposite(li0);
 				t3.A2 = ti2;
 
-				triangles.Add(t2);
-				triangles.Add(t3);
+				triangleNodeList.Add(t2);
+				triangleNodeList.Add(t3);
 
-				var nt0 = triangles[ti0];
-				var nt1 = triangles[ti1];
+				var nt0 = triangleNodeList[ti0];
+				var nt1 = triangleNodeList[ti1];
 
 				nt0.C0 = ti2;
 				nt0.C1 = ti3;
@@ -455,8 +429,8 @@ namespace DelaunayVoronoi
 				nt1.C0 = ti2;
 				nt1.C1 = ti3;
 
-				triangles[ti0] = nt0;
-				triangles[ti1] = nt1;
+				triangleNodeList[ti0] = nt0;
+				triangleNodeList[ti1] = nt1;
 
 				if (t2.A0 != -1) LegalizeEdge(ti2, t2.A0, pi, li0, qi);
 				if (t3.A0 != -1) LegalizeEdge(ti3, t3.A0, pi, qi, li1);
@@ -465,14 +439,14 @@ namespace DelaunayVoronoi
 
 		private void ProcessWhenPointIsOnTriangleEdges(int pi, int ti, int ei0, int ei1)
 		{
-			var t = triangles[ti];
+			var t = triangleNodeList[ti];
 
 			var p0 = t.P0;
 			var p1 = t.P1;
 			var p2 = t.P2;
 
 			// Indices of the newly created triangles.
-			var nti0 = triangles.Count;
+			var nti0 = triangleNodeList.Count;
 			var nti1 = nti0 + 1;
 
 			var nt0 = new TriangleNode(pi, p0, p1);
@@ -489,22 +463,22 @@ namespace DelaunayVoronoi
 			t.C0 = nti0;
 			t.C1 = nti1;
 
-			triangles[ti] = t;
+			triangleNodeList[ti] = t;
 
-			triangles.Add(nt0);
-			triangles.Add(nt1);
+			triangleNodeList.Add(nt0);
+			triangleNodeList.Add(nt1);
 
 			var oti = t.A1;
 			if (oti != -1)
 			{
 				oti = LeafWithEdge(oti, ei0, ei1);
-				var ot = triangles[oti];
+				var ot = triangleNodeList[oti];
 
 				var op0 = ot.P0;
 				var op1 = ot.P1;
 				var op2 = ot.P2;
 
-				var onti0 = triangles.Count;
+				var onti0 = triangleNodeList.Count;
 				var onti1 = onti0 + 1;
 
 				var ont0 = new TriangleNode(pi, op1, op2);
@@ -521,16 +495,16 @@ namespace DelaunayVoronoi
 				ot.C0 = onti0;
 				ot.C1 = onti1;
 
-				triangles[oti] = ot;
+				triangleNodeList[oti] = ot;
 
 				nt0.A2 = onti1;
 				nt1.A1 = onti0;
 
-				triangles[nti0] = nt0;
-				triangles[nti1] = nt1;
+				triangleNodeList[nti0] = nt0;
+				triangleNodeList[nti1] = nt1;
 
-				triangles.Add(ont0);
-				triangles.Add(ont1);
+				triangleNodeList.Add(ont0);
+				triangleNodeList.Add(ont1);
 
 				if (ont0.A0 != -1) LegalizeEdge(onti0, ont0.A0, pi, op1, op2);
 				if (ont1.A0 != -1) LegalizeEdge(onti1, ont1.A0, pi, op2, op0);
@@ -539,10 +513,9 @@ namespace DelaunayVoronoi
 			if (nt0.A0 != -1) LegalizeEdge(nti0, nt0.A0, pi, p0, p1);
 			if (nt1.A0 != -1) LegalizeEdge(nti1, nt1.A0, pi, p1, p2);
 		}
-
 		private void ProcessWhenPointIsInTriangle(int pi, int ti)
 		{
-			var t = triangles[ti];
+			var t = triangleNodeList[ti];
 
 			// The points of the containing triangle in CCW order
 			var p0 = t.P0;
@@ -550,7 +523,7 @@ namespace DelaunayVoronoi
 			var p2 = t.P2;
 
 			// Indices of the newly created triangles.
-			var nti0 = triangles.Count;
+			var nti0 = triangleNodeList.Count;
 			var nti1 = nti0 + 1;
 			var nti2 = nti0 + 2;
 
@@ -579,20 +552,27 @@ namespace DelaunayVoronoi
 			t.C1 = nti1;
 			t.C2 = nti2;
 
-			triangles[ti] = t;
+			triangleNodeList[ti] = t;
 
-			triangles.Add(nt0);
-			triangles.Add(nt1);
-			triangles.Add(nt2);
+			triangleNodeList.Add(nt0);
+			triangleNodeList.Add(nt1);
+			triangleNodeList.Add(nt2);
 
 			if (nt0.A0 != -1) LegalizeEdge(nti0, nt0.A0, pi, p0, p1);
 			if (nt1.A0 != -1) LegalizeEdge(nti1, nt1.A0, pi, p1, p2);
 			if (nt2.A0 != -1) LegalizeEdge(nti2, nt2.A0, pi, p2, p0);
 		}
 
-		/// <summary>
-		/// Run the algorithm
-		/// </summary>
+		private void Initialize()
+		{
+			highest = 0;
+			for (int i = 0; i < points.Length; i++)
+				if (Higher(highest, i))
+					highest = i;
+
+			// Add first triangle, the bounding triangle.
+			triangleNodeList.Add(new TriangleNode(-2, -1, highest));
+		}
 		private void RunBowyerWatson()
 		{
 			// For each point, find the containing triangle, split it into three
@@ -613,16 +593,92 @@ namespace DelaunayVoronoi
 					ProcessWhenPointIsInTriangle(pi, ti);
 			}
 		}
+		private void CalculateDataStruct(DelaunayTriangulation triangulation)
+		{
+			var triangleCount = triangulation.indices.Length / 3;
+			triangulation.triangles = new DelaunayTriangulation.Triangle[triangleCount];
 
-		/// <summary>
-		/// Filter the points array and triangle tree into a readable result.
-		/// </summary>
-		void GenerateResult(out DelaunayTriangulation result, bool clockWise)
+			var halfEdgeCount = triangulation.indices.Length;
+			triangulation.halfEdges = new DelaunayTriangulation.HalfEdge[halfEdgeCount];
+
+			triangulation.barycenters = new Point2D[triangleCount];
+			triangulation.circumcenters = new Point2D[triangleCount];
+
+			var processlist = new List<int>();
+
+			var index = 0;
+			for (int i = 0; i < triangulation.indices.Length; i += 3)
+			{
+				processlist.Add(i);
+				processlist.Add(i + 1);
+				processlist.Add(i + 2);
+
+				triangulation.halfEdges[i] = new DelaunayTriangulation.HalfEdge
+				{
+					pi0 = triangulation.indices[i],
+					pi1 = triangulation.indices[i + 1],
+
+					ti = index
+				};
+				triangulation.halfEdges[i + 1] = new DelaunayTriangulation.HalfEdge
+				{
+					pi0 = triangulation.indices[i + 1],
+					pi1 = triangulation.indices[i + 2],
+
+					ti = index
+				};
+				triangulation.halfEdges[i + 2] = new DelaunayTriangulation.HalfEdge
+				{
+					pi0 = triangulation.indices[i + 2],
+					pi1 = triangulation.indices[i],
+
+					ti = index
+				};
+
+				triangulation.barycenters[index] = Utility.CalculateBarycenter(points[triangulation.indices[i]], points[triangulation.indices[i + 1]], points[triangulation.indices[i + 2]]);
+				triangulation.circumcenters[index] = Utility.CalculateCircumcenter(points[triangulation.indices[i]], points[triangulation.indices[i + 1]], points[triangulation.indices[i + 2]]);
+
+				triangulation.triangles[index] = new DelaunayTriangulation.Triangle
+				{
+					hei0 = i,
+					hei1 = i + 1,
+					hei2 = i + 2,
+
+					bci = index,
+					cci = index
+				};
+
+				index++;
+			}
+
+			while (processlist.Count > 0)
+			{
+				var current = processlist[0];
+
+				for (int i = 0; i < processlist.Count; i++)
+				{
+					var tmp = processlist[i];
+					if (triangulation.halfEdges[current].pi0 == triangulation.halfEdges[tmp].pi1 &&
+						triangulation.halfEdges[current].pi1 == triangulation.halfEdges[tmp].pi0)
+					{
+						triangulation.halfEdges[current].ohei = tmp;
+						triangulation.halfEdges[tmp].ohei = current;
+
+						processlist.RemoveAt(i);
+
+						break;
+					}
+				}
+
+				processlist.RemoveAt(0);
+			}
+		}
+		private void GenerateResult(out DelaunayTriangulation result, bool clockWise)
 		{
 			var tmp = new List<int>();
-			for (int i = 0; i < this.triangles.Count; i++)
+			for (int i = 0; i < this.triangleNodeList.Count; i++)
 			{
-				var triangle = triangles[i];
+				var triangle = triangleNodeList[i];
 				if (triangle.IsLeaf && triangle.IsInner)
 				{
 					if (clockWise)
@@ -641,16 +697,15 @@ namespace DelaunayVoronoi
 			}
 
 			result = new DelaunayTriangulation(points, tmp.ToArray());
+			CalculateDataStruct(result);
 		}
 
-		/// <summary>
-		/// Calculate the triangulation of the supplied vertices.
-		///
-		/// This overload allows you to reuse the result object, to prevent
-		/// garbage from being created.
-		/// </summary>
-		/// <param name="verts">List of vertices to use for calculation</param>
-		/// <param name="result">Result object to store the triangulation in</param>
+		private void Clear()
+		{
+			this.points = null;
+			triangleNodeList.Clear();
+		}
+
 		public void CalculateTriangulation(Point2D[] verts, out DelaunayTriangulation result, bool clockWise = false)
 		{
 			if (verts == null)
@@ -659,22 +714,15 @@ namespace DelaunayVoronoi
 			if (verts.Length < 3)
 				throw new ArgumentException("You need at least 3 points for a triangulation");
 
-			triangles.Clear();
 			this.points = verts;
 
-			highest = 0;
-
-			for (int i = 0; i < verts.Length; i++)
-				if (Higher(highest, i))
-					highest = i;
-
-			// Add first triangle, the bounding triangle.
-			triangles.Add(new TriangleNode(-2, -1, highest));
+			Initialize();
 
 			RunBowyerWatson();
+
 			GenerateResult(out result, clockWise);
 
-			this.points = null;
+			Clear();
 		}
 	}
 }
