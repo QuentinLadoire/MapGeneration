@@ -11,7 +11,6 @@ public class MapGeneratorEditor : Editor
 		base.OnInspectorGUI();
 
 		var target = this.target as MapGenerator;
-
 		EditorGUILayout.Space();
 
 		if (GUILayout.Button("Generate"))
@@ -21,12 +20,22 @@ public class MapGeneratorEditor : Editor
 
 		EditorGUILayout.Space();
 
-		GUILayout.Label("Logs", EditorStyles.boldLabel);
+		GUILayout.Label("Delaunay Logs", EditorStyles.boldLabel);
 		if (target.Triangulation != null)
 		{
-			GUILayout.Label(target.LogPointCount());
-			GUILayout.Label(target.LogTriangleCount());
-			GUILayout.Label(target.LogHalfEdgeCount());
+			GUILayout.Label(target.LogDelaunayPointCount());
+			GUILayout.Label(target.LogDelaunayTriangleCount());
+			GUILayout.Label(target.LogDelaunayHalfEdgeCount());
+		}
+
+		EditorGUILayout.Space();
+
+		GUILayout.Label("Voronoi Logs", EditorStyles.boldLabel);
+		if (target.Diagram != null)
+		{
+			GUILayout.Label(target.LogVoronoiSiteCount());
+			GUILayout.Label(target.LogVoronoiPointCount());
+			GUILayout.Label(target.LogVoronoiHalfEdgeCount());
 		}
 	}
 }

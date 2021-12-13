@@ -1,10 +1,43 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+
 using Miscellaneous;
 using Miscellaneous.Unity;
 using PoissonDisk;
 using DelaunayVoronoi;
+
+[System.Serializable]
+public struct RenderDelaunaySetting
+{
+	public bool renderMesh;
+	public bool renderPoints;
+	public bool renderHalfEdges;
+	public bool renderBarycenters;
+	public bool renderCircumcenters;
+
+	public RenderDelaunaySetting(bool renderMesh, bool renderPoints, bool renderHalfEdges, bool renderBarycenters, bool renderCircumcenters)
+	{
+		this.renderMesh = renderMesh;
+		this.renderPoints = renderPoints;
+		this.renderHalfEdges = renderHalfEdges;
+		this.renderBarycenters = renderBarycenters;
+		this.renderCircumcenters = renderCircumcenters;
+	}
+}
+
+[System.Serializable]
+public struct RenderVoronoiSetting
+{
+	public bool renderSites;
+	public bool renderPoints;
+	public bool renderHalfEdges;
+
+	public RenderVoronoiSetting(bool renderSites, bool renderPoints, bool renderHalfEdges)
+	{
+		this.renderSites = renderSites;
+		this.renderPoints = renderPoints;
+		this.renderHalfEdges = renderHalfEdges;
+	}
+}
 
 [ExecuteAlways]
 public class MapGenerator : MonoBehaviour
@@ -16,19 +49,12 @@ public class MapGenerator : MonoBehaviour
 	[SerializeField] private int sampleLimitBeforeRejection = 30;
 	[SerializeField] private Vector2 areaSize = new Vector2(30.0f, 30.0f);
 
-	[Header("Diagram Setting")]
-	[SerializeField] private bool fromBarycenter = false;
+	[Header("Voronoi Setting")]
+	[SerializeField] private DiagramSetting diagramSetting = new DiagramSetting();
 
 	[Header("Render Settings")]
-	[SerializeField] private bool renderDelaunayMesh = false;
-	[SerializeField] private bool renderDelaunayPoints = false;
-	[SerializeField] private bool renderDelaunayHalfEdge = false;
-	[SerializeField] private bool renderDelaunayBarycenter = false;
-	[SerializeField] private bool renderDelaunayCircumcenter = false;
-
-	[SerializeField] private bool renderVoronoiSite = false;
-	[SerializeField] private bool renderVoronoiPoint = false;
-	[SerializeField] private bool renderVoronoiHalfEdge = false;
+	[SerializeField] private RenderDelaunaySetting renderDelaunaySetting = new RenderDelaunaySetting();
+	[SerializeField] private RenderVoronoiSetting renderVoronoiSetting = new RenderVoronoiSetting();
 
 	[Header("MapGenerator Setting")]
 	[SerializeField] private bool autoGenerate = false;
@@ -42,6 +68,7 @@ public class MapGenerator : MonoBehaviour
 	private MeshFilter meshFilter = null;
 	private MeshRenderer meshRenderer = null;
 
+	public VoronoiDiagram Diagram => diagram;
 	public DelaunayTriangulation Triangulation => triangulation;
 
 	private void GenerateData()
@@ -57,9 +84,8 @@ public class MapGenerator : MonoBehaviour
 		poissonDiskSampling.ComputePoints(out points);
 
 		delaunayCalculator.CalculateTriangulation(points, out triangulation, true);
-		triangulation.CalculateDataStruct();
 
-		voronoiCalculator.CalculateDiagram(triangulation, out diagram, fromBarycenter);
+		voronoiCalculator.CalculateDiagram(triangulation, out diagram, diagramSetting);
 	}
 	private void CreateMesh()
 	{
@@ -173,19 +199,33 @@ public class MapGenerator : MonoBehaviour
 		GenerateData();
 		CreateMesh();
 
-		meshRenderer.enabled = renderDelaunayMesh;
+		meshRenderer.enabled = renderDelaunaySetting.renderMesh;
 	}
-	public string LogPointCount()
+
+	public string LogDelaunayPointCount()
 	{
 		return string.Format("Point Count : {0}", triangulation.points.Length);
 	}
-	public string LogTriangleCount()
+	public string LogDelaunayTriangleCount()
 	{
 		return string.Format("Triangle Count : {0}", triangulation.triangles.Length);
 	}
-	public string LogHalfEdgeCount()
+	public string LogDelaunayHalfEdgeCount()
 	{
 		return string.Format("HalfEdge Count : {0}", triangulation.halfEdges.Length);
+	}
+
+	public string LogVoronoiSiteCount()
+	{
+		return string.Format("Site Count : {0}", diagram.sites.Length);
+	}
+	public string LogVoronoiPointCount()
+	{
+		return string.Format("Point Count : {0}", diagram.points.Length);
+	}
+	public string LogVoronoiHalfEdgeCount()
+	{
+		return string.Format("HalfEdge Count : {0}", diagram.halfEdges.Length);
 	}
 
 	private void Awake()
@@ -208,25 +248,25 @@ public class MapGenerator : MonoBehaviour
 	{
 		if (triangulation != null && diagram != null)
 		{
-			if (renderDelaunayHalfEdge)
+			if (renderDelaunaySetting.renderHalfEdges)
 				DrawDelaunayHalfEdges();
 
-			if (renderVoronoiHalfEdge)
+			if (renderVoronoiSetting.renderHalfEdges)
 				DrawVoronoiHalfEdges();
 
-			if (renderDelaunayPoints)
+			if (renderDelaunaySetting.renderPoints)
 				DrawDelaunayPoints();
 
-			if (renderDelaunayBarycenter)
+			if (renderDelaunaySetting.renderBarycenters)
 				DrawDelaunayBarycenters();
 
-			if (renderDelaunayCircumcenter)
+			if (renderDelaunaySetting.renderCircumcenters)
 				DrawDelaunayCircumcenters();
 
-			if (renderVoronoiSite)
+			if (renderVoronoiSetting.renderSites)
 				DrawVoronoiSites();
 
-			if (renderVoronoiPoint)
+			if (renderVoronoiSetting.renderPoints)
 				DrawVoronoiPoints();
 		}
 	}
