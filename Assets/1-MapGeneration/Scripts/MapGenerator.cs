@@ -42,12 +42,7 @@ public struct RenderVoronoiSetting
 [ExecuteAlways]
 public class MapGenerator : MonoBehaviour
 {
-	[Header("PoissonDisk Settings")]
-	[SerializeField] private int seed = 0;
-	[SerializeField] private float radius = 1.0f;
-	[SerializeField] private bool createHull = false;
-	[SerializeField] private int sampleLimitBeforeRejection = 30;
-	[SerializeField] private Vector2 areaSize = new Vector2(30.0f, 30.0f);
+	[SerializeField] private PoissonDiskSetting poissonDiskSetting = PoissonDiskSetting.Default;
 
 	[Header("Voronoi Setting")]
 	[SerializeField] private DiagramSetting diagramSetting = new DiagramSetting();
@@ -73,15 +68,8 @@ public class MapGenerator : MonoBehaviour
 
 	private void GenerateData()
 	{
-		poissonDiskSampling.Seed = seed;
-		poissonDiskSampling.Radius = radius;
-		poissonDiskSampling.AreaWidth = areaSize.x;
-		poissonDiskSampling.AreaHeight = areaSize.y;
-		poissonDiskSampling.CreateHull = createHull;
-		poissonDiskSampling.SampleLimitBeforeRejection = sampleLimitBeforeRejection;
-
 		Point2D[] points;
-		poissonDiskSampling.ComputePoints(out points);
+		poissonDiskSampling.ComputePoints(poissonDiskSetting, out points);
 
 		delaunayCalculator.CalculateTriangulation(points, out triangulation, true);
 
@@ -100,8 +88,8 @@ public class MapGenerator : MonoBehaviour
 		{
 			uv[i] = new Vector2
 			{
-				x = triangulation.points[i].x / areaSize.x,
-				y = triangulation.points[i].y / areaSize.y
+				x = triangulation.points[i].x / poissonDiskSetting.areaWidth,
+				y = triangulation.points[i].y / poissonDiskSetting.areaHeight
 			};
 		}
 
