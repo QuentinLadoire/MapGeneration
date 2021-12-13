@@ -4,10 +4,11 @@ using Miscellaneous;
 
 namespace DelaunayVoronoi
 {
-	public static class Utility
+	public static class DelaunayUtility
     {
+		public static float epsilon = 0.00001f;
+
 		private const float oneThird = 1.0f / 3.0f;
-		private const float epsilon = 0.001f;
 
 		public static bool ToTheLeft(Point2D p, Point2D l0, Point2D l1)
 		{
@@ -246,7 +247,7 @@ namespace DelaunayVoronoi
 			else if (li1 == -2) return Higher(pi, li0);
 			else if (li1 == -1) return Higher(li0, pi);
 			else 
-				return Utility.ToTheLeft(points[pi], points[li0], points[li1]);
+				return DelaunayUtility.ToTheLeft(points[pi], points[li0], points[li1]);
 		}
 		private bool OnTheEdge(int pi, int li0, int li1)
 		{
@@ -255,7 +256,7 @@ namespace DelaunayVoronoi
 			else if (li1 == -2) return false;
 			else if (li1 == -1) return false;
 			else
-				return Utility.OnAnEdge(points[pi], points[li0], points[li1]);
+				return DelaunayUtility.OnAnEdge(points[pi], points[li0], points[li1]);
 		}
 
 		private bool PointInTriangle(int pi, int ti)
@@ -358,7 +359,7 @@ namespace DelaunayVoronoi
 				var l0 = points[k];
 				var l1 = points[j];
 
-				return Utility.ToTheLeft(p, l0, l1);
+				return DelaunayUtility.ToTheLeft(p, l0, l1);
 			}
 			else if (jMagic)
 			{
@@ -366,7 +367,7 @@ namespace DelaunayVoronoi
 				var l0 = points[k];
 				var l1 = points[i];
 
-				return Utility.OnAnEdge(p, l0, l1) || !Utility.ToTheLeft(p, l0, l1);
+				return DelaunayUtility.OnAnEdge(p, l0, l1) || !DelaunayUtility.ToTheLeft(p, l0, l1);
 			}
 			else
 			{
@@ -375,7 +376,7 @@ namespace DelaunayVoronoi
 				var c1 = points[i];
 				var c2 = points[j];
 
-				return !Utility.InsideCircumCircle(p, c0, c1, c2);
+				return !DelaunayUtility.InsideCircumCircle(p, c0, c1, c2);
 			}
 		}
 
@@ -635,8 +636,8 @@ namespace DelaunayVoronoi
 					ti = index
 				};
 
-				triangulation.barycenters[index] = Utility.CalculateBarycenter(points[triangulation.indices[i]], points[triangulation.indices[i + 1]], points[triangulation.indices[i + 2]]);
-				triangulation.circumcenters[index] = Utility.CalculateCircumcenter(points[triangulation.indices[i]], points[triangulation.indices[i + 1]], points[triangulation.indices[i + 2]]);
+				triangulation.barycenters[index] = DelaunayUtility.CalculateBarycenter(points[triangulation.indices[i]], points[triangulation.indices[i + 1]], points[triangulation.indices[i + 2]]);
+				triangulation.circumcenters[index] = DelaunayUtility.CalculateCircumcenter(points[triangulation.indices[i]], points[triangulation.indices[i + 1]], points[triangulation.indices[i + 2]]);
 
 				triangulation.triangles[index] = new DelaunayTriangulation.Triangle
 				{
@@ -717,12 +718,19 @@ namespace DelaunayVoronoi
 			this.points = verts;
 
 			Initialize();
-
-			RunBowyerWatson();
+						
+			try
+			{
+				RunBowyerWatson();
+			}
+			catch (Exception exc)
+			{
+				Console.WriteLine(exc.Message);
+			}
 
 			GenerateResult(out result, clockWise);
 
 			Clear();
-		}
+			}
 	}
 }
