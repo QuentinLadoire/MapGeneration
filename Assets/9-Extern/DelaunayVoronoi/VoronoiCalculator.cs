@@ -30,6 +30,7 @@ namespace DelaunayVoronoi
 		private CellNode[] cellNodes = null;
 		private List<Point2D> pointList = new List<Point2D>();
 		private List<VoronoiDiagram.HalfEdge> halfEdgeList = new List<VoronoiDiagram.HalfEdge>();
+		private List<int> processList = new List<int>();
 
 		private DelaunayTriangulation triangulation = null;
 		private Point2D[] Points => triangulation.points;
@@ -53,6 +54,8 @@ namespace DelaunayVoronoi
 				});
 
 				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
+
+				processList.Add(halfEdgeList.Count - 1);
 			}
 			else if (createHull)
 			{
@@ -70,7 +73,9 @@ namespace DelaunayVoronoi
 					pi0 = triangle.bci,
 					pi1 = pointList.Count - 1,
 
-					ci = halfEdge.pi1
+					ci = halfEdge.pi1,
+
+					ohei = halfEdgeList.Count + 1
 				});
 				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
 
@@ -79,7 +84,9 @@ namespace DelaunayVoronoi
 					pi0 = pointList.Count - 1,
 					pi1 = triangle.bci,
 
-					ci = halfEdge.pi0
+					ci = halfEdge.pi0,
+					
+					ohei = halfEdgeList.Count - 1
 				});
 				cellNodes[halfEdge.pi0].heis.Add(halfEdgeList.Count - 1);
 			}
@@ -101,6 +108,8 @@ namespace DelaunayVoronoi
 				});
 
 				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
+
+				processList.Add(halfEdgeList.Count - 1);
 			}
 			else if (createHull)
 			{
@@ -118,7 +127,9 @@ namespace DelaunayVoronoi
 					pi0 = triangle.cci,
 					pi1 = pointList.Count - 1,
 
-					ci = halfEdge.pi1
+					ci = halfEdge.pi1,
+					
+					ohei = halfEdgeList.Count + 1
 				});
 				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
 
@@ -127,7 +138,9 @@ namespace DelaunayVoronoi
 					pi0 = pointList.Count - 1,
 					pi1 = triangle.cci,
 
-					ci = halfEdge.pi0
+					ci = halfEdge.pi0,
+
+					ohei = halfEdgeList.Count - 1
 				});
 				cellNodes[halfEdge.pi0].heis.Add(halfEdgeList.Count - 1);
 			}
@@ -184,6 +197,28 @@ namespace DelaunayVoronoi
 				else
 					ComputeCircumcenterHalfEdgesForTriangle(i);
 			}
+
+			while (processList.Count > 0)
+			{
+				var current = processList[0];
+
+				for (int i = 1; i < processList.Count; i++)
+				{
+					var tmp = processList[i];
+					if (halfEdgeList[current].pi0 == halfEdgeList[tmp].pi1 &&
+						halfEdgeList[current].pi1 == halfEdgeList[tmp].pi0)
+					{
+						halfEdgeList[current].ohei = tmp;
+						halfEdgeList[tmp].ohei = current;
+
+						processList.RemoveAt(i);
+
+						break;
+					}
+				}
+
+				processList.RemoveAt(0);
+			}
 		}
 		private void GenerateResult(out VoronoiDiagram diagram)
 		{
@@ -209,6 +244,7 @@ namespace DelaunayVoronoi
 			cellNodes = null;
 			pointList.Clear();
 			halfEdgeList.Clear();
+			processList.Clear();
 
 			triangulation = null;
 		}
