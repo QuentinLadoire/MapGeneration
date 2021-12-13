@@ -4,6 +4,25 @@ using Miscellaneous;
 
 namespace DelaunayVoronoi
 {
+	[Serializable]
+	public struct TriangulationSetting
+	{
+		public float epsilon;
+		public bool clockWise;
+
+		public TriangulationSetting(float epsilon, bool clockWise)
+		{
+			this.epsilon = epsilon;
+			this.clockWise = clockWise;
+		}
+
+		public static TriangulationSetting Default = new TriangulationSetting
+		{
+			epsilon = 0.00001f,
+			clockWise = false
+		};
+	}
+
 	public static class DelaunayUtility
     {
 		public static float epsilon = 0.00001f;
@@ -732,5 +751,10 @@ namespace DelaunayVoronoi
 
 			Clear();
 			}
+		public void CalculateTriangulation(Point2D[] verts, out DelaunayTriangulation result, TriangulationSetting setting)
+		{
+			DelaunayUtility.epsilon = setting.epsilon;
+			CalculateTriangulation(verts, out result, setting.clockWise);
+		}
 	}
 }

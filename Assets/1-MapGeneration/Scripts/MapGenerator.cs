@@ -43,10 +43,7 @@ public struct RenderVoronoiSetting
 public class MapGenerator : MonoBehaviour
 {
 	[SerializeField] private PoissonDiskSetting poissonDiskSetting = PoissonDiskSetting.Default;
-
-	[Header("Delaunay Settings")]
-	[SerializeField] private float epsilon = 0.00001f;
-
+	[SerializeField] private TriangulationSetting triangulationSetting = TriangulationSetting.Default;
 	[SerializeField] private DiagramSetting diagramSetting = new DiagramSetting();
 
 	[Header("Render Settings")]
@@ -73,8 +70,7 @@ public class MapGenerator : MonoBehaviour
 		Point2D[] points;
 		poissonDiskSampling.ComputePoints(poissonDiskSetting, out points);
 
-		DelaunayUtility.epsilon = epsilon;
-		delaunayCalculator.CalculateTriangulation(points, out triangulation, true);
+		delaunayCalculator.CalculateTriangulation(points, out triangulation, triangulationSetting);
 
 		voronoiCalculator.CalculateDiagram(triangulation, out diagram, diagramSetting);
 	}
