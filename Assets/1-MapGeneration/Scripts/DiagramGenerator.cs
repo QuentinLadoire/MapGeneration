@@ -37,8 +37,7 @@ public struct RenderVoronoiSetting
 	}
 }
 
-[ExecuteAlways]
-public class MapGenerator : MonoBehaviour
+public class DiagramGenerator : MonoBehaviour
 {
 	[SerializeField] private PoissonDiskSetting poissonDiskSetting = PoissonDiskSetting.Default;
 	[SerializeField] private TriangulationSetting triangulationSetting = TriangulationSetting.Default;

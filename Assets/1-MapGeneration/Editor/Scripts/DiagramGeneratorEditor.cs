@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(MapGenerator))]
-public class MapGeneratorEditor : Editor
+[CustomEditor(typeof(DiagramGenerator))]
+public class DiagramGeneratorEditor : Editor
 {
 	public override void OnInspectorGUI()
 	{
 		base.OnInspectorGUI();
 
-		var target = this.target as MapGenerator;
+		var target = this.target as DiagramGenerator;
 		EditorGUILayout.Space();
 
 		if (GUILayout.Button("Generate"))
