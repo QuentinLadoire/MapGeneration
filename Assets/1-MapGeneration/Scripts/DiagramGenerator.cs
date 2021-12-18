@@ -12,14 +12,6 @@ public struct RenderDelaunaySetting
 	public bool renderHalfEdges;
 	public bool renderBarycenters;
 	public bool renderCircumcenters;
-
-	public RenderDelaunaySetting(bool renderPoints, bool renderHalfEdges, bool renderBarycenters, bool renderCircumcenters)
-	{
-		this.renderPoints = renderPoints;
-		this.renderHalfEdges = renderHalfEdges;
-		this.renderBarycenters = renderBarycenters;
-		this.renderCircumcenters = renderCircumcenters;
-	}
 }
 
 [System.Serializable]
@@ -28,13 +20,12 @@ public struct RenderVoronoiSetting
 	public bool renderSites;
 	public bool renderPoints;
 	public bool renderHalfEdges;
+}
 
-	public RenderVoronoiSetting(bool renderSites, bool renderPoints, bool renderHalfEdges)
-	{
-		this.renderSites = renderSites;
-		this.renderPoints = renderPoints;
-		this.renderHalfEdges = renderHalfEdges;
-	}
+[System.Serializable]
+public struct RenderMeshSetting
+{
+	public bool renderDiagramMesh;
 }
 
 public class DiagramGenerator : MonoBehaviour
@@ -46,6 +37,7 @@ public class DiagramGenerator : MonoBehaviour
 	[Header("Render Settings")]
 	[SerializeField] private RenderDelaunaySetting renderDelaunaySetting = new RenderDelaunaySetting();
 	[SerializeField] private RenderVoronoiSetting renderVoronoiSetting = new RenderVoronoiSetting();
+	[SerializeField] private RenderMeshSetting renderMeshSetting = new RenderMeshSetting();
 
 	[Header("MapGenerator Setting")]
 	[SerializeField] private bool autoGenerate = false;
@@ -59,6 +51,27 @@ public class DiagramGenerator : MonoBehaviour
 	public VoronoiDiagram Diagram => diagram;
 	public DelaunayTriangulation Triangulation => triangulation;
 
+	private void GenerateTriangulationMesh()
+	{
+		var mesh = new Mesh
+		{
+			vertices = triangulation.points.ToVector3Array(),
+			triangles = triangulation.indices
+		};
+
+		GetComponent<MeshFilter>().sharedMesh = mesh;
+	}
+	private void GenerateDiagramMesh()
+	{
+		var mesh = new Mesh
+		{
+			vertices = diagram.allPoints.ToVector3Array(),
+			triangles = diagram.indices
+		};
+
+		GetComponent<MeshFilter>().sharedMesh = mesh;
+	}
+
 	private void GenerateData()
 	{
 		Point2D[] points;
@@ -67,6 +80,13 @@ public class DiagramGenerator : MonoBehaviour
 		delaunayCalculator.CalculateTriangulation(points, out triangulation, triangulationSetting);
 
 		voronoiCalculator.CalculateDiagram(triangulation, out diagram, diagramSetting);
+	}
+	private void GenerateMesh()
+	{
+		if (renderMeshSetting.renderDiagramMesh)
+			GenerateDiagramMesh();
+		else
+			GenerateTriangulationMesh();
 	}
 
 	private void DrawDelaunayPoints()
@@ -112,9 +132,9 @@ public class DiagramGenerator : MonoBehaviour
 
 	private void DrawVoronoiSites()
 	{
-		for (int i = 0; i < diagram.sites.Length; i++)
+		for (int i = 0; i < diagram.SiteCount; i++)
 		{
-			var site = diagram.sites[i];
+			var site = diagram.GetSiteAt(i);
 
 			Gizmos.color = Color.red;
 			Gizmos.DrawSphere(site.ToVector3(), 0.1f);
@@ -122,9 +142,9 @@ public class DiagramGenerator : MonoBehaviour
 	}
 	private void DrawVoronoiPoints()
 	{
-		for (int i = 0; i < diagram.points.Length; i++)
+		for (int i = 0; i < diagram.PointCount; i++)
 		{
-			var point = diagram.points[i];
+			var point = diagram.GetPointAt(i);
 
 			Gizmos.color = Color.blue;
 			Gizmos.DrawSphere(point.ToVector3(), 0.1f);
@@ -137,13 +157,15 @@ public class DiagramGenerator : MonoBehaviour
 			var halfEdge = diagram.halfEdges[i];
 
 			Gizmos.color = Color.black;
-			Gizmos.DrawLine(diagram.points[halfEdge.pi0].ToVector3(), diagram.points[halfEdge.pi1].ToVector3());
+			Gizmos.DrawLine(diagram.GetPointAt(halfEdge.pi0).ToVector3(), diagram.GetPointAt(halfEdge.pi1).ToVector3());
 		}
 	}
 
 	public void Generate()
 	{
 		GenerateData();
+
+		GenerateMesh();
 	}
 
 	public string LogDelaunayPointCount()
@@ -161,11 +183,11 @@ public class DiagramGenerator : MonoBehaviour
 
 	public string LogVoronoiSiteCount()
 	{
-		return string.Format("Site Count : {0}", diagram.sites.Length);
+		return string.Format("Site Count : {0}", diagram.SiteCount);
 	}
 	public string LogVoronoiPointCount()
 	{
-		return string.Format("Point Count : {0}", diagram.points.Length);
+		return string.Format("Point Count : {0}", diagram.PointCount);
 	}
 	public string LogVoronoiHalfEdgeCount()
 	{
@@ -181,11 +203,7 @@ public class DiagramGenerator : MonoBehaviour
 	{
 		if (triangulation != null && diagram != null)
 		{
-			var translation = new Vector3(-0.5f, -0.5f, 0.0f);
-			var rotation = Quaternion.identity;
-			var scale = new Vector3(1.0f / poissonDiskSetting.areaWidth, 1.0f / poissonDiskSetting.areaHeight, 0.0f);
-
-			Gizmos.matrix = transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, scale);
+			Gizmos.matrix = transform.localToWorldMatrix;
 
 			if (renderDelaunaySetting.renderHalfEdges)
 				DrawDelaunayHalfEdges();

@@ -26,147 +26,126 @@ namespace DelaunayVoronoi
 
 		private bool createHull = false;
 		private bool fromBarycenter = false;
+		private DelaunayTriangulation triangulation = null;
+
+		private int siteCount = 0;
+		private List<Point2D> pointList = new List<Point2D>();
 
 		private CellNode[] cellNodes = null;
-		private List<Point2D> pointList = new List<Point2D>();
+		private List<int> triangleIndiceList = new List<int>();
+		private List<int> halfEdgeIndexToProcessList = new List<int>();
 		private List<VoronoiDiagram.HalfEdge> halfEdgeList = new List<VoronoiDiagram.HalfEdge>();
-		private List<int> processList = new List<int>();
 
-		private DelaunayTriangulation triangulation = null;
-		private Point2D[] Points => triangulation.points;
-		private DelaunayTriangulation.Triangle[] Triangles => triangulation.triangles;
-		private DelaunayTriangulation.HalfEdge[] HalfEdges => triangulation.halfEdges;
-
-		private void ComputeBarycenterTriangleHalfEdge(int hei)
+		private void AddPoint(float x, float y)
 		{
-			var halfEdge = HalfEdges[hei];
-			var triangle = Triangles[halfEdge.ti];
+			pointList.Add(new Point2D
+			{
+				x = x,
+				y = y
+			});
+		}
+		private void AddHalfEdge(int pi0, int pi1, int ci)
+		{
+			halfEdgeList.Add(new VoronoiDiagram.HalfEdge
+			{
+				pi0 = pi0,
+				pi1 = pi1,
+
+				ci = ci
+			});
+
+			cellNodes[ci].heis.Add(halfEdgeList.Count - 1);
+
+			halfEdgeIndexToProcessList.Add(halfEdgeList.Count - 1);
+		}
+		private void AddHalfEdge(int pi0, int pi1, int ci, int ohei)
+		{
+			halfEdgeList.Add(new VoronoiDiagram.HalfEdge
+			{
+				pi0 = pi0,
+				pi1 = pi1,
+
+				ci = ci,
+
+				ohei = ohei
+			});
+			cellNodes[ci].heis.Add(halfEdgeList.Count - 1);
+		}
+		private void AddTriangle(int index1, int index2, int index3)
+		{
+			triangleIndiceList.Add(index1);
+			triangleIndiceList.Add(index2);
+			triangleIndiceList.Add(index3);
+		}
+
+		private void ComputeDiagramHalfEdgeForTriangleHalfEdge(int hei)
+		{
+			var points = triangulation.points;
+			var triangles = triangulation.triangles;
+			var halfEdges = triangulation.halfEdges;
+
+			var halfEdge = halfEdges[hei];
+			var triangle = triangles[halfEdge.ti];
 
 			if (halfEdge.ohei != -1)
 			{
-				var otherTriangle = Triangles[HalfEdges[halfEdge.ohei].ti];
-				halfEdgeList.Add(new VoronoiDiagram.HalfEdge
-				{
-					pi0 = triangle.bci,
-					pi1 = otherTriangle.bci,
+				var otherTriangle = triangles[halfEdges[halfEdge.ohei].ti];
 
-					ci = halfEdge.pi1
-				});
+				AddHalfEdge(triangle.bci, otherTriangle.bci, halfEdge.pi1);
 
-				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
-
-				processList.Add(halfEdgeList.Count - 1);
+				AddTriangle(siteCount + triangle.bci, siteCount + otherTriangle.bci, halfEdge.pi1);
 			}
 			else if (createHull)
 			{
-				var p0 = Points[halfEdge.pi0];
-				var p1 = Points[halfEdge.pi1];
+				var p0 = points[halfEdge.pi0];
+				var p1 = points[halfEdge.pi1];
 
-				pointList.Add(new Point2D
-				{
-					x = (p0.x + p1.x) * 0.5f,
-					y = (p0.y + p1.y) * 0.5f
-				});
+				AddPoint((p0.x + p1.x) * 0.5f, (p0.y + p1.y) * 0.5f);
 
-				halfEdgeList.Add(new VoronoiDiagram.HalfEdge
-				{
-					pi0 = triangle.bci,
-					pi1 = pointList.Count - 1,
+				AddHalfEdge(triangle.bci, pointList.Count - 1 - siteCount, halfEdge.pi1, halfEdgeList.Count + 1);
 
-					ci = halfEdge.pi1,
+				AddTriangle(siteCount + triangle.bci, pointList.Count - 1, halfEdge.pi1);
 
-					ohei = halfEdgeList.Count + 1
-				});
-				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
+				AddHalfEdge(pointList.Count - 1 - siteCount, triangle.bci, halfEdge.pi0, halfEdgeList.Count - 1);
 
-				halfEdgeList.Add(new VoronoiDiagram.HalfEdge
-				{
-					pi0 = pointList.Count - 1,
-					pi1 = triangle.bci,
-
-					ci = halfEdge.pi0,
-					
-					ohei = halfEdgeList.Count - 1
-				});
-				cellNodes[halfEdge.pi0].heis.Add(halfEdgeList.Count - 1);
+				AddTriangle(pointList.Count - 1, siteCount + triangle.bci, halfEdge.pi0);
 			}
 		}
-		private void ComputeCircumcenterTriangleHalfEdge(int hei)
+		private void ComputeDiagramHalfEdgesForTriangle(int ti)
 		{
-			var halfEdge = HalfEdges[hei];
-			var triangle = Triangles[halfEdge.ti];
-
-			if (halfEdge.ohei != -1)
-			{
-				var otherTriangle = Triangles[HalfEdges[halfEdge.ohei].ti];
-				halfEdgeList.Add(new VoronoiDiagram.HalfEdge
-				{
-					pi0 = triangle.cci,
-					pi1 = otherTriangle.cci,
-
-					ci = halfEdge.pi1
-				});
-
-				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
-
-				processList.Add(halfEdgeList.Count - 1);
-			}
-			else if (createHull)
-			{
-				var p0 = Points[halfEdge.pi0];
-				var p1 = Points[halfEdge.pi1];
-
-				pointList.Add(new Point2D
-				{
-					x = (p0.x + p1.x) * 0.5f,
-					y = (p0.y + p1.y) * 0.5f
-				});
-
-				halfEdgeList.Add(new VoronoiDiagram.HalfEdge
-				{
-					pi0 = triangle.cci,
-					pi1 = pointList.Count - 1,
-
-					ci = halfEdge.pi1,
-					
-					ohei = halfEdgeList.Count + 1
-				});
-				cellNodes[halfEdge.pi1].heis.Add(halfEdgeList.Count - 1);
-
-				halfEdgeList.Add(new VoronoiDiagram.HalfEdge
-				{
-					pi0 = pointList.Count - 1,
-					pi1 = triangle.cci,
-
-					ci = halfEdge.pi0,
-
-					ohei = halfEdgeList.Count - 1
-				});
-				cellNodes[halfEdge.pi0].heis.Add(halfEdgeList.Count - 1);
-			}
-		}
-
-		private void ComputeBarycenterHalfEdgesForTriangle(int ti)
-		{
-			var triangle = Triangles[ti];
+			var triangle = triangulation.triangles[ti];
 
 			//First triangle HalfEdge
-			ComputeBarycenterTriangleHalfEdge(triangle.hei0);
+			ComputeDiagramHalfEdgeForTriangleHalfEdge(triangle.hei0);
 			//Second triangle HalfEdge
-			ComputeBarycenterTriangleHalfEdge(triangle.hei1);
+			ComputeDiagramHalfEdgeForTriangleHalfEdge(triangle.hei1);
 			//Third triangle HalfEdge
-			ComputeBarycenterTriangleHalfEdge(triangle.hei2);
+			ComputeDiagramHalfEdgeForTriangleHalfEdge(triangle.hei2);
 		}
-		private void ComputeCircumcenterHalfEdgesForTriangle(int ti)
-		{
-			var triangle = Triangles[ti];
 
-			//First triangle HalfEdge
-			ComputeCircumcenterTriangleHalfEdge(triangle.hei0);
-			//Second triangle HalfEdge
-			ComputeCircumcenterTriangleHalfEdge(triangle.hei1);
-			//Third triangle HalfEdge
-			ComputeCircumcenterTriangleHalfEdge(triangle.hei2);
+		private void ProcessHalfEdgeIndexList()
+		{
+			while (halfEdgeIndexToProcessList.Count > 0)
+			{
+				var current = halfEdgeIndexToProcessList[0];
+
+				for (int i = 1; i < halfEdgeIndexToProcessList.Count; i++)
+				{
+					var tmp = halfEdgeIndexToProcessList[i];
+					if (halfEdgeList[current].pi0 == halfEdgeList[tmp].pi1 &&
+						halfEdgeList[current].pi1 == halfEdgeList[tmp].pi0)
+					{
+						halfEdgeList[current].ohei = tmp;
+						halfEdgeList[tmp].ohei = current;
+
+						halfEdgeIndexToProcessList.RemoveAt(i);
+
+						break;
+					}
+				}
+
+				halfEdgeIndexToProcessList.RemoveAt(0);
+			}
 		}
 
 		private void InitializeCellNodes()
@@ -182,43 +161,24 @@ namespace DelaunayVoronoi
 		}
 		private void InitializePointList()
 		{
+			siteCount = triangulation.points.Length;
+			pointList.AddRange(triangulation.points);
+
 			if (fromBarycenter)
 				pointList.AddRange(triangulation.barycenters);
 			else
 				pointList.AddRange(triangulation.circumcenters);
 		}
 
-		private void ComputeHalfEdges()
+		private void ComputeDiagramHalfEdges()
 		{
-			for (int i = 0; i < Triangles.Length; i++)
+			var triangles = triangulation.triangles;
+			for (int i = 0; i < triangles.Length; i++)
 			{
-				if (fromBarycenter)
-					ComputeBarycenterHalfEdgesForTriangle(i);
-				else
-					ComputeCircumcenterHalfEdgesForTriangle(i);
+				ComputeDiagramHalfEdgesForTriangle(i);
 			}
 
-			while (processList.Count > 0)
-			{
-				var current = processList[0];
-
-				for (int i = 1; i < processList.Count; i++)
-				{
-					var tmp = processList[i];
-					if (halfEdgeList[current].pi0 == halfEdgeList[tmp].pi1 &&
-						halfEdgeList[current].pi1 == halfEdgeList[tmp].pi0)
-					{
-						halfEdgeList[current].ohei = tmp;
-						halfEdgeList[tmp].ohei = current;
-
-						processList.RemoveAt(i);
-
-						break;
-					}
-				}
-
-				processList.RemoveAt(0);
-			}
+			ProcessHalfEdgeIndexList();
 		}
 		private void GenerateResult(out VoronoiDiagram diagram)
 		{
@@ -233,20 +193,22 @@ namespace DelaunayVoronoi
 				};
 			}
 
-			diagram = new VoronoiDiagram(triangulation.points, pointList.ToArray(), cells, halfEdgeList.ToArray());
+			diagram = new VoronoiDiagram(pointList.ToArray(), siteCount, triangleIndiceList.ToArray(), cells, halfEdgeList.ToArray());
 		}
 
 		private void Clear()
 		{
 			createHull = false;
 			fromBarycenter = false;
+			triangulation = null;
+
+			siteCount = 0;
+			pointList.Clear();
 
 			cellNodes = null;
-			pointList.Clear();
+			triangleIndiceList.Clear();
+			halfEdgeIndexToProcessList.Clear();
 			halfEdgeList.Clear();
-			processList.Clear();
-
-			triangulation = null;
 		}
 
 		public void CalculateDiagram(DelaunayTriangulation triangulation, out VoronoiDiagram diagram, bool fromBarycenter = false, bool createHull = false)
@@ -259,7 +221,7 @@ namespace DelaunayVoronoi
 
 			InitializePointList();
 
-			ComputeHalfEdges();
+			ComputeDiagramHalfEdges();
 
 			GenerateResult(out diagram);
 

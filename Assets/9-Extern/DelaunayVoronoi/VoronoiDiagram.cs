@@ -20,15 +20,35 @@ namespace DelaunayVoronoi
             public int[] hei = null;
         }
 
+        private int siteCount = 0;
+        private int pointCount = 0;
+
+        public int[] indices = null;
+        public Point2D[] allPoints = null;
+
         public Cell[] cells = null;
-        public Point2D[] sites = null;
-        public Point2D[] points = null;
         public HalfEdge[] halfEdges = null;
 
-        public VoronoiDiagram(Point2D[] sites, Point2D[] points, Cell[] cells, HalfEdge[] halfEdges)
+        public int SiteCount => siteCount;
+        public int PointCount => pointCount;
+
+        public Point2D GetSiteAt(int index)
 		{
-            this.sites = sites;
-            this.points = points;
+            return allPoints[index];
+		}
+        public Point2D GetPointAt(int index)
+		{
+            return allPoints[siteCount + index];
+		}
+
+        public VoronoiDiagram(Point2D[] allPoints, int siteCount, int[] indices, Cell[] cells, HalfEdge[] halfEdges)
+		{
+            this.allPoints = allPoints;
+            this.siteCount = siteCount;
+            this.pointCount = allPoints.Length - siteCount;
+
+            this.indices = indices;
+
             this.cells = cells;
             this.halfEdges = halfEdges;
 		}
