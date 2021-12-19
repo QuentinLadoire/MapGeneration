@@ -22,12 +22,6 @@ public struct RenderVoronoiSetting
 	public bool renderHalfEdges;
 }
 
-[System.Serializable]
-public struct RenderMeshSetting
-{
-	public bool renderDiagramMesh;
-}
-
 public class DiagramGenerator : MonoBehaviour
 {
 	[SerializeField] private PoissonDiskSetting poissonDiskSetting = PoissonDiskSetting.Default;
@@ -37,7 +31,6 @@ public class DiagramGenerator : MonoBehaviour
 	[Header("Render Settings")]
 	[SerializeField] private RenderDelaunaySetting renderDelaunaySetting = new RenderDelaunaySetting();
 	[SerializeField] private RenderVoronoiSetting renderVoronoiSetting = new RenderVoronoiSetting();
-	[SerializeField] private RenderMeshSetting renderMeshSetting = new RenderMeshSetting();
 
 	[Header("MapGenerator Setting")]
 	[SerializeField] private bool autoGenerate = false;
@@ -51,27 +44,6 @@ public class DiagramGenerator : MonoBehaviour
 	public VoronoiDiagram Diagram => diagram;
 	public DelaunayTriangulation Triangulation => triangulation;
 
-	private void GenerateTriangulationMesh()
-	{
-		var mesh = new Mesh
-		{
-			vertices = triangulation.points.ToVector3Array(),
-			triangles = triangulation.indices
-		};
-
-		GetComponent<MeshFilter>().sharedMesh = mesh;
-	}
-	private void GenerateDiagramMesh()
-	{
-		var mesh = new Mesh
-		{
-			vertices = diagram.allPoints.ToVector3Array(),
-			triangles = diagram.indices
-		};
-
-		GetComponent<MeshFilter>().sharedMesh = mesh;
-	}
-
 	private void GenerateData()
 	{
 		Point2D[] points;
@@ -80,13 +52,6 @@ public class DiagramGenerator : MonoBehaviour
 		delaunayCalculator.CalculateTriangulation(points, out triangulation, triangulationSetting);
 
 		voronoiCalculator.CalculateDiagram(triangulation, out diagram, diagramSetting);
-	}
-	private void GenerateMesh()
-	{
-		if (renderMeshSetting.renderDiagramMesh)
-			GenerateDiagramMesh();
-		else
-			GenerateTriangulationMesh();
 	}
 
 	private void DrawDelaunayPoints()
@@ -164,8 +129,6 @@ public class DiagramGenerator : MonoBehaviour
 	public void Generate()
 	{
 		GenerateData();
-
-		GenerateMesh();
 	}
 
 	public string LogDelaunayPointCount()

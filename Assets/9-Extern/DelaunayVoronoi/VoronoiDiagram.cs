@@ -41,6 +41,11 @@ namespace DelaunayVoronoi
             return allPoints[siteCount + index];
 		}
 
+        public int GetRealPointIndex(int index)
+		{
+            return siteCount + index;
+        }
+
         public VoronoiDiagram(Point2D[] allPoints, int siteCount, int[] indices, Cell[] cells, HalfEdge[] halfEdges)
 		{
             this.allPoints = allPoints;
