@@ -8,19 +8,20 @@ namespace Geometry.DataStructure
 	{
 		private class HalfEdgeDataBuilderFromMeshData
 		{
-			private HalfEdgeData data = null;
+			private HalfEdgeData halfEdgeDataResult = null;
 
 			private void Initialize(Vector3[] vertices, int[] triangles)
 			{
-				data = new HalfEdgeData
+				halfEdgeDataResult = new HalfEdgeData
 				{
 					vertices = vertices,
 					faces = new Face[triangles.Length / 3],
 					halfEdges = new HalfEdge[triangles.Length],
+					edges = new Edge[triangles.Length / 2],
 					dualData = null
 				};
 			}
-			private void ComputeHalfEdgesAndFacesFrom(int[] triangles)
+			private void ComputeHalfEdges(int[] triangles)
 			{
 				int faceIndex = 0;
 				for (int i = 0; i < triangles.Length; i += 3)
@@ -33,31 +34,40 @@ namespace Geometry.DataStructure
 					var vertexIndex1 = triangles[i + 1];
 					var vertexIndex2 = triangles[i + 2];
 
-					data.halfEdges[halfEdgeIndex0] = new HalfEdge(vertexIndex0, halfEdgeIndex1, halfEdgeIndex2, -1, faceIndex, data);
-					data.halfEdges[halfEdgeIndex1] = new HalfEdge(vertexIndex1, halfEdgeIndex2, halfEdgeIndex0, -1, faceIndex, data);
-					data.halfEdges[halfEdgeIndex2] = new HalfEdge(vertexIndex2, halfEdgeIndex0, halfEdgeIndex1, -1, faceIndex, data);
+					halfEdgeDataResult.halfEdges[halfEdgeIndex0] = new HalfEdge(vertexIndex0, halfEdgeIndex1, halfEdgeIndex2, -1, faceIndex, halfEdgeDataResult);
+					halfEdgeDataResult.halfEdges[halfEdgeIndex1] = new HalfEdge(vertexIndex1, halfEdgeIndex2, halfEdgeIndex0, -1, faceIndex, halfEdgeDataResult);
+					halfEdgeDataResult.halfEdges[halfEdgeIndex2] = new HalfEdge(vertexIndex2, halfEdgeIndex0, halfEdgeIndex1, -1, faceIndex, halfEdgeDataResult);
 
-					data.faces[faceIndex] = new Face(halfEdgeIndex0, halfEdgeIndex2, data);
+					halfEdgeDataResult.faces[faceIndex] = new Face(halfEdgeIndex0, halfEdgeIndex2, halfEdgeDataResult);
 
 					faceIndex++;
 				}
-
-				var processList = new List<int>(triangles.Length);
-				for (int i = 0; i < triangles.Length; i++)
+			}
+			private void ComputeEdges()
+			{
+				var processList = new List<int>(halfEdgeDataResult.halfEdges.Length);
+				for (int i = 0; i < halfEdgeDataResult.halfEdges.Length; i++)
 					processList.Add(i);
 
+				int edgeIndex = 0;
 				while (processList.Count > 0)
 				{
 					var current = processList[0];
+
+					halfEdgeDataResult.edges[edgeIndex].parentData = halfEdgeDataResult;
+					halfEdgeDataResult.edges[edgeIndex].firstHalfEdge = current;
+
 					for (int i = 1; i < processList.Count; i++)
 					{
 						var toTest = processList[i];
 
-						if (data.halfEdges[current].vertexIndex == data.halfEdges[toTest].Next.vertexIndex &&
-							data.halfEdges[current].Next.vertexIndex == data.halfEdges[toTest].vertexIndex)
+						if (halfEdgeDataResult.halfEdges[current].vertexIndex == halfEdgeDataResult.halfEdges[toTest].Next.vertexIndex &&
+							halfEdgeDataResult.halfEdges[current].Next.vertexIndex == halfEdgeDataResult.halfEdges[toTest].vertexIndex)
 						{
-							data.halfEdges[current].oppositeIndex = toTest;
-							data.halfEdges[toTest].oppositeIndex = current;
+							halfEdgeDataResult.halfEdges[current].oppositeIndex = toTest;
+							halfEdgeDataResult.halfEdges[toTest].oppositeIndex = current;
+
+							halfEdgeDataResult.edges[edgeIndex].secondHalfEdge = toTest;
 
 							processList.RemoveAt(i);
 
@@ -65,16 +75,18 @@ namespace Geometry.DataStructure
 						}
 					}
 
+					edgeIndex++;
+
 					processList.RemoveAt(0);
 				}
 			}
 			private void GenerateResult(out HalfEdgeData result)
 			{
-				result = data;
+				result = halfEdgeDataResult;
 			}
 			private void Clear()
 			{
-				data = null;
+				halfEdgeDataResult = null;
 			}
 
 			public bool CreateHalfEdgeData(MeshData data, out HalfEdgeData result)
@@ -86,7 +98,8 @@ namespace Geometry.DataStructure
 				}
 
 				Initialize(data.vertices, data.triangles);
-				ComputeHalfEdgesAndFacesFrom(data.triangles);
+				ComputeHalfEdges(data.triangles);
+				ComputeEdges();
 				GenerateResult(out result);
 				Clear();
 
@@ -95,78 +108,136 @@ namespace Geometry.DataStructure
 		}
 		private class HalfEdgeDataBuilderFromHalfEdgeData
 		{
-			private HalfEdgeData halfEdgeResult = null;
+			private HalfEdgeData halfEdgeDataResult = null;
 
-			private List<HalfEdge> halfEdges = new List<HalfEdge>();
+			private int GetFaceEdgeCount(int startIndex, HalfEdge startHalfEdge)
+			{
+				var triangleHalfEdge = startHalfEdge;
+
+				int currentIndex;
+				int edgeCount = 0;
+				do
+				{
+					edgeCount++;
+
+					currentIndex = triangleHalfEdge.Opposite.previousIndex;
+					triangleHalfEdge = triangleHalfEdge.Opposite.Previous;
+				}
+				while (currentIndex != startIndex);
+
+				return edgeCount;
+			}
 
 			private void Initialize(HalfEdgeData data)
 			{
-				halfEdgeResult = new HalfEdgeData();
-
-				halfEdgeResult.vertices = new Vector3[data.faces.Length];
-				for (int i = 0; i < data.faces.Length; i++)
+				halfEdgeDataResult = new HalfEdgeData
 				{
-					var face = data.faces[i];
+					vertices = new Vector3[data.faces.Length],
+					faces = new Face[data.vertices.Length],
+					halfEdges = new HalfEdge[data.halfEdges.Length],
+					edges = new Edge[data.edges.Length],
+					dualData = null
+				};
+			}
+			private void FillVertices(Face[] faces)
+			{
+				for (int i = 0; i < faces.Length; i++)
+				{
+					var face = faces[i];
 
 					var p0 = face.First.Vertex;
 					var p1 = face.First.Next.Vertex;
 					var p2 = face.Last.Vertex;
 
-					halfEdgeResult.vertices[i] = GeometryUtility.CalculateBarycenter(p0, p1, p2);
-				}
+					var vertex = GeometryUtility.CalculateBarycenter(p0, p1, p2);
+					vertex = GeometryUtility.ProjectOnSphere(vertex, p0.magnitude);
 
-				halfEdgeResult.faces = new Face[data.vertices.Length];
+					halfEdgeDataResult.vertices[i] = vertex;
+				}
 			}
-			private void Compute(HalfEdgeData data)
+			private void ComputeHalfEdges(HalfEdge[] triangleHalfEdges)
 			{
-				var processList = new List<int>(data.halfEdges.Length);
-				for (int i = 0; i < data.halfEdges.Length; i++)
+				var processList = new List<int>(triangleHalfEdges.Length);
+				for (int i = 0; i < triangleHalfEdges.Length; i++)
 					processList.Add(i);
 
+				var halfEdgesCount = 0;
 				while (processList.Count > 0)
 				{
 					var processIndex = processList[0];
-					var triangleHalfEdge = data.halfEdges[processIndex];
+					var triangleHalfEdge = triangleHalfEdges[processIndex];
 
-					int currentIndex = processIndex;
-					int halfEdgeCount = 0;
-					do
-					{
-						halfEdgeCount++;
+					int faceEdgeCount = GetFaceEdgeCount(processIndex, triangleHalfEdge);
 
-						processList.Remove(currentIndex);
-
-						currentIndex = triangleHalfEdge.Opposite.previousIndex;
-						triangleHalfEdge = triangleHalfEdge.Opposite.Previous;
-					}
-					while (currentIndex != processIndex);
-
-					var halfEdgesCount = halfEdges.Count;
 					var faceIndex = triangleHalfEdge.Next.vertexIndex;
-					halfEdgeResult.faces[faceIndex] = new Face(halfEdgesCount, halfEdgesCount + halfEdgeCount - 1, halfEdgeResult);
+					halfEdgeDataResult.faces[faceIndex] = new Face(halfEdgesCount, halfEdgesCount + faceEdgeCount - 1, halfEdgeDataResult);
 
-					for (int i = 0; i < halfEdgeCount; i++)
+					for (int i = 0; i < faceEdgeCount; i++)
 					{
 						var vertexIndex = triangleHalfEdge.faceIndex;
-						var nextIndex = (i != halfEdgeCount - 1) ? i + 1 : 0;
-						var previousIndex = (i != 0) ? i - 1 : halfEdgeCount - 1;
+						var nextIndex = (i != faceEdgeCount - 1) ? i + 1 : 0;
+						var previousIndex = (i != 0) ? i - 1 : faceEdgeCount - 1;
 
-						halfEdges.Add(new HalfEdge(vertexIndex, halfEdgesCount + nextIndex, halfEdgesCount + previousIndex, -1, faceIndex, this.halfEdgeResult));
+						halfEdgeDataResult.halfEdges[halfEdgesCount + i] = new HalfEdge(vertexIndex, halfEdgesCount + nextIndex, halfEdgesCount + previousIndex, -1, faceIndex, halfEdgeDataResult);
+						
+						processList.Remove(processIndex);
 
+						processIndex = triangleHalfEdge.Opposite.previousIndex;
 						triangleHalfEdge = triangleHalfEdge.Opposite.Previous;
 					}
+
+					halfEdgesCount += faceEdgeCount;
 				}
+			}
+			private void ComputeEdges()
+			{
+				var processList = new List<int>(halfEdgeDataResult.halfEdges.Length);
+				for (int i = 0; i < halfEdgeDataResult.halfEdges.Length; i++)
+					processList.Add(i);
+
+				int edgeIndex = 0;
+				while (processList.Count > 0)
+				{
+					var current = processList[0];
+
+					halfEdgeDataResult.edges[edgeIndex].parentData = halfEdgeDataResult;
+					halfEdgeDataResult.edges[edgeIndex].firstHalfEdge = current;
+
+					for (int i = 1; i < processList.Count; i++)
+					{
+						var toTest = processList[i];
+
+						if (halfEdgeDataResult.halfEdges[current].vertexIndex == halfEdgeDataResult.halfEdges[toTest].Next.vertexIndex &&
+							halfEdgeDataResult.halfEdges[current].Next.vertexIndex == halfEdgeDataResult.halfEdges[toTest].vertexIndex)
+						{
+							halfEdgeDataResult.halfEdges[current].oppositeIndex = toTest;
+							halfEdgeDataResult.halfEdges[toTest].oppositeIndex = current;
+
+							halfEdgeDataResult.edges[edgeIndex].secondHalfEdge = toTest;
+
+							processList.RemoveAt(i);
+
+							break;
+						}
+					}
+
+					edgeIndex++;
+
+					processList.RemoveAt(0);
+				}
+			}
+			private void Compute(HalfEdgeData triangleData)
+			{
+				ComputeHalfEdges(triangleData.halfEdges);
+				ComputeEdges();
 			}
 			private void GenerateResult(out HalfEdgeData result)
 			{
-				halfEdgeResult.halfEdges = halfEdges.ToArray();
-				
-				result = halfEdgeResult;
+				result = halfEdgeDataResult;
 			}
 			private void Clear()
 			{
-				halfEdgeResult = null;
-				halfEdges.Clear();
+				halfEdgeDataResult = null;
 			}
 
 			public bool CreateHalfEdgeData(HalfEdgeData data, out HalfEdgeData result)
@@ -178,6 +249,7 @@ namespace Geometry.DataStructure
 				}
 
 				Initialize(data);
+				FillVertices(data.faces);
 				Compute(data);
 				GenerateResult(out result);
 				Clear();

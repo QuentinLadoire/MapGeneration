@@ -38,6 +38,17 @@ namespace Geometry.DataStructure
 		}
 	}
 
+	public struct Edge
+	{
+		public int firstHalfEdge;
+		public int secondHalfEdge;
+
+		public HalfEdgeData parentData;
+
+		public HalfEdge FirstHalfEdge => parentData.halfEdges[firstHalfEdge];
+		public HalfEdge SecondHalfEdge => parentData.halfEdges[secondHalfEdge];
+	}
+
 	public struct Face
 	{
 		public int firstIndex;
@@ -62,6 +73,7 @@ namespace Geometry.DataStructure
 		public Vector3[] vertices = null;
 		public HalfEdge[] halfEdges = null;
 		public Face[] faces = null;
+		public Edge[] edges = null;
 
 		public HalfEdgeData dualData = null;
 	}

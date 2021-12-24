@@ -17,5 +17,13 @@ namespace Geometry
 				z = (v0.z + v1.z + v2.z) * oneThird
 			};
 		}
+		public static Vector3 ProjectOnUnitSphere(Vector3 vector)
+		{
+			return vector.normalized;
+		}
+		public static Vector3 ProjectOnSphere(Vector3 vector, float radius)
+		{
+			return ProjectOnUnitSphere(vector) * radius;
+		}
 	}
 }
