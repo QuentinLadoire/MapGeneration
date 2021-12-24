@@ -260,12 +260,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   planetMaterial: {fileID: 2100000, guid: c5470dd0272bade48ab0dfe774d2f338, type: 2}
-  shapeSetting:
-    planetRadius: 5
-    planetRefiningStep: 3
-  renderMesh: 1
-  renderTriangleData: 0
-  renderPolygonData: 0
+  planetRadius: 1
+  planetRefiningStep: 3
+  cubeMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  triangleDebugMat: {fileID: 2100000, guid: 421d04ab47e460842a4244a7dfc3f048, type: 2}
+  polygonDebugMat: {fileID: 2100000, guid: 897713160644a6e4ab433d8a072608d3, type: 2}
+  tickness: 0.002
+  renderPlanet: 1
+  renderTriangleData: 1
+  renderPolygonData: 1
 --- !u!1 &1832047226
 GameObject:
   m_ObjectHideFlags: 0

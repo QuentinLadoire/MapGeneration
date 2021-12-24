@@ -1,91 +1,111 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Geometry;
+using Geometry.DataStructure;
 
 [ExecuteAlways]
 public class PlanetGenerator : MonoBehaviour
 {
+	[Header("Planet Settings")]
 	[SerializeField] private Material planetMaterial = null;
-	[SerializeField] private PlanetShapeSetting shapeSetting = new PlanetShapeSetting();
+	[SerializeField] private float planetRadius = 1.0f;
+	[SerializeField] private int planetRefiningStep = 3;
 
-	[SerializeField] private bool renderMesh = false;
+	[Header("Debug Settings")]
+	[SerializeField] private Mesh cubeMesh = null;
+	[SerializeField] private Material triangleDebugMat = null;
+	[SerializeField] private Material polygonDebugMat = null;
+	[SerializeField] private float tickness = 0.005f;
+
+	[Header("Render Options")]
+	[SerializeField] private bool renderPlanet = false;
 	[SerializeField] private bool renderTriangleData = false;
 	[SerializeField] private bool renderPolygonData = false;
 
 	private Mesh mesh = null;
+	private MeshData meshData = null;
+	private DualMeshData dualMeshData = null;
 
-	public void Generate()
+	private void DrawPlanet()
 	{
-		shapeSetting.GenerateShape();
+		if (mesh != null && planetMaterial != null && renderPlanet)
+			Graphics.DrawMesh(mesh, transform.localToWorldMatrix, planetMaterial, 0);
+	}
+
+	private void DrawEdges(Edge[] edges, int offset, int count, Material material, float tickness = 0.005f)
+	{
+		var edgeMatrices = new List<Matrix4x4>(count);
+		for (int j = 0; j < count; j++)
+		{
+			var p0 = edges[offset + j].FirstHalfEdge.Vertex;
+			var p1 = edges[offset + j].FirstHalfEdge.Next.Vertex;
+
+			var forward = p1 - p0;
+
+			var translation = (p0 + p1) * 0.5f;
+			var rotation = Quaternion.LookRotation(forward);
+
+			edgeMatrices.Add(transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, new Vector3(tickness, tickness, forward.magnitude)));
+		}
+
+		Graphics.DrawMeshInstanced(cubeMesh, 0, material, edgeMatrices);
+	}
+	private void DrawPolygonData()
+	{
+		var edges = dualMeshData.polygonData.edges;
+		
+		int drawCount = edges.Length / 1023;
+		for (int i = 0; i < drawCount; i++)
+			DrawEdges(edges, 1023 * i, 1023, polygonDebugMat, tickness);
+
+		var edgeCountLeft = edges.Length - 1023 * drawCount;
+		DrawEdges(edges, 1023 * drawCount, edgeCountLeft, polygonDebugMat, tickness);
+	}
+	private void DrawTriangleData()
+	{
+		var edges = dualMeshData.triangleData.edges;
+
+		int drawCount = edges.Length / 1023;
+		for (int i = 0; i < drawCount; i++)
+			DrawEdges(edges, 1023 * i, 1023, triangleDebugMat, tickness);
+
+		var edgeCountLeft = edges.Length - 1023 * drawCount;
+		DrawEdges(edges, 1023 * drawCount, edgeCountLeft, triangleDebugMat, tickness);
+	}
+	private void DrawDebug()
+	{
+		if (dualMeshData == null)
+			return;
+
+		if (renderTriangleData && triangleDebugMat != null)
+			DrawTriangleData();
+
+		if (renderPolygonData && polygonDebugMat != null)
+			DrawPolygonData();
+	}
+
+	private void GenerateShape()
+	{
+		meshData = MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep);
+		DataStructureBuilder.CreateDualMeshData(meshData, out dualMeshData);
 
 		mesh = new Mesh
 		{
-			vertices = shapeSetting.meshData.vertices,
-			triangles = shapeSetting.meshData.triangles
+			vertices = meshData.vertices,
+			triangles = meshData.triangles
 		};
 		mesh.RecalculateNormals();
+	}
+	public void Generate()
+	{
+		GenerateShape();
 	}
 
 	private void Update()
 	{
-		if (mesh != null && planetMaterial != null && renderMesh)
-			Graphics.DrawMesh(mesh, transform.localToWorldMatrix, planetMaterial, 0);
-	}
+		DrawPlanet();
 
-	private static Material lineMaterial;
-	private static void CreateLineMaterial()
-	{
-		if (!lineMaterial)
-		{
-			// Unity has a built-in shader that is useful for drawing
-			// simple colored things.
-			Shader shader = Shader.Find("Hidden/Internal-Colored");
-			lineMaterial = new Material(shader);
-			lineMaterial.hideFlags = HideFlags.HideAndDontSave;
-			// Turn on alpha blending
-			lineMaterial.SetInteger("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-			lineMaterial.SetInteger("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-			// Turn backface culling off
-			lineMaterial.SetInteger("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-			// Turn off depth writes
-			lineMaterial.SetInteger("_ZWrite", 0);
-		}
-	}
-	private void OnRenderObject()
-	{
-		if (shapeSetting != null && shapeSetting.dualMeshData != null)
-		{
-			CreateLineMaterial();
-			lineMaterial.SetPass(0);
-
-			GL.PushMatrix();
-			var matrix = Matrix4x4.TRS(transform.position, transform.rotation, transform.localScale + new Vector3(0.002f, 0.002f, 0.002f));
-			GL.MultMatrix(matrix);
-
-			GL.Begin(GL.LINES);
-			{
-				if (renderTriangleData)
-				{
-					GL.Color(Color.black);
-					foreach (var halfEdge in shapeSetting.dualMeshData.triangleData.halfEdges)
-					{
-						GL.Vertex(halfEdge.Vertex);
-						GL.Vertex(halfEdge.Next.Vertex);
-					}
-				}
-
-				if (renderPolygonData)
-				{
-					GL.Color(Color.red);
-					foreach (var halfEdge in shapeSetting.dualMeshData.polygonData.halfEdges)
-					{
-						GL.Vertex(halfEdge.Vertex);
-						GL.Vertex(halfEdge.Next.Vertex);
-					}
-				}
-			}
-			GL.End();
-			GL.PopMatrix();
-		}
+		DrawDebug();
 	}
 }
