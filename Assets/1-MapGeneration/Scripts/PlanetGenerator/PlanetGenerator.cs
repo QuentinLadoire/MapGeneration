@@ -24,8 +24,9 @@ public class PlanetGenerator : MonoBehaviour
 	[SerializeField] private bool renderPolygonData = false;
 
 	private Mesh mesh = null;
-	private MeshData meshData = null;
-	private DualMeshData dualMeshData = null;
+	private MeshData icoSphereMeshData = null;
+	private MeshData goldbergPolyhedronMeshData = null;
+	private DualHalfEdgeData dualMeshData = null;
 
 	private void DrawPlanet()
 	{
@@ -87,13 +88,15 @@ public class PlanetGenerator : MonoBehaviour
 
 	private void GenerateShape()
 	{
-		meshData = MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep);
-		DataStructureBuilder.CreateDualMeshData(meshData, out dualMeshData);
+		icoSphereMeshData = MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep);
+		DataStructureBuilder.CreateDualMeshData(icoSphereMeshData, out dualMeshData);
+
+		goldbergPolyhedronMeshData = MeshGenerator.CreateMeshFromHalfEdgePolygon(dualMeshData.polygonData);
 
 		mesh = new Mesh
 		{
-			vertices = meshData.vertices,
-			triangles = meshData.triangles
+			vertices = goldbergPolyhedronMeshData.vertices,
+			triangles = goldbergPolyhedronMeshData.triangles
 		};
 		mesh.RecalculateNormals();
 	}
