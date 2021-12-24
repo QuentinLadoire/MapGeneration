@@ -4,10 +4,10 @@ using UnityEngine;
 
 namespace Geometry
 {
-	public struct MeshData
+	public class MeshData
 	{
-		public int[] triangles;
-		public Vector3[] vertices;
+		public int[] triangles = null;
+		public Vector3[] vertices = null;
 
 		public MeshData(Vector3[] vertices, int[] triangles)
 		{
