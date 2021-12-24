@@ -17,6 +17,15 @@ namespace Geometry
 				z = (v0.z + v1.z + v2.z) * oneThird
 			};
 		}
+		public static Vector3 CalculateBarycenter(Vector3[] polygon)
+		{
+			var result = Vector3.zero;
+			for (int i = 0; i < polygon.Length; i++)
+				result += polygon[i];
+
+			return result / polygon.Length;
+		}
+
 		public static Vector3 ProjectOnUnitSphere(Vector3 vector)
 		{
 			return vector.normalized;

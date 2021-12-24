@@ -54,15 +54,19 @@ namespace Geometry.DataStructure
 		public int firstIndex;
 		public int lastIndex;
 
+		public int edgeCount;
+
 		public HalfEdgeData parentData;
 
 		public HalfEdge First => parentData.halfEdges[firstIndex];
 		public HalfEdge Last => parentData.halfEdges[lastIndex];
 
-		public Face(int firstIndex, int lastIndex, HalfEdgeData parentData)
+		public Face(int firstIndex, int lastIndex, int edgeCount, HalfEdgeData parentData)
 		{
 			this.firstIndex = firstIndex;
 			this.lastIndex = lastIndex;
+
+			this.edgeCount = edgeCount;
 
 			this.parentData = parentData;
 		}
@@ -78,7 +82,7 @@ namespace Geometry.DataStructure
 		public HalfEdgeData dualData = null;
 	}
 
-	public class DualMeshData
+	public class DualHalfEdgeData
 	{
 		public HalfEdgeData triangleData = null;
 		public HalfEdgeData polygonData = null;

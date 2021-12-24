@@ -38,7 +38,7 @@ namespace Geometry.DataStructure
 					halfEdgeDataResult.halfEdges[halfEdgeIndex1] = new HalfEdge(vertexIndex1, halfEdgeIndex2, halfEdgeIndex0, -1, faceIndex, halfEdgeDataResult);
 					halfEdgeDataResult.halfEdges[halfEdgeIndex2] = new HalfEdge(vertexIndex2, halfEdgeIndex0, halfEdgeIndex1, -1, faceIndex, halfEdgeDataResult);
 
-					halfEdgeDataResult.faces[faceIndex] = new Face(halfEdgeIndex0, halfEdgeIndex2, halfEdgeDataResult);
+					halfEdgeDataResult.faces[faceIndex] = new Face(halfEdgeIndex0, halfEdgeIndex2, 3, halfEdgeDataResult);
 
 					faceIndex++;
 				}
@@ -170,7 +170,7 @@ namespace Geometry.DataStructure
 					int faceEdgeCount = GetFaceEdgeCount(processIndex, triangleHalfEdge);
 
 					var faceIndex = triangleHalfEdge.Next.vertexIndex;
-					halfEdgeDataResult.faces[faceIndex] = new Face(halfEdgesCount, halfEdgesCount + faceEdgeCount - 1, halfEdgeDataResult);
+					halfEdgeDataResult.faces[faceIndex] = new Face(halfEdgesCount, halfEdgesCount + faceEdgeCount - 1, faceEdgeCount, halfEdgeDataResult);
 
 					for (int i = 0; i < faceEdgeCount; i++)
 					{
@@ -268,7 +268,7 @@ namespace Geometry.DataStructure
 			var halfEdgeDataBuilder = new HalfEdgeDataBuilderFromHalfEdgeData();
 			return halfEdgeDataBuilder.CreateHalfEdgeData(data, out result);
 		}
-		public static bool CreateDualMeshData(MeshData meshData, out DualMeshData dualMesh)
+		public static bool CreateDualMeshData(MeshData meshData, out DualHalfEdgeData dualMesh)
 		{
 			if (!CreateHalfEdgeData(meshData, out HalfEdgeData triangleMeshData) || !CreateHalfEdgeData(triangleMeshData, out HalfEdgeData polygonMeshData))
 			{
@@ -279,7 +279,7 @@ namespace Geometry.DataStructure
 			triangleMeshData.dualData = polygonMeshData;
 			polygonMeshData.dualData = triangleMeshData;
 
-			dualMesh = new DualMeshData
+			dualMesh = new DualHalfEdgeData
 			{
 				triangleData = triangleMeshData,
 				polygonData = polygonMeshData

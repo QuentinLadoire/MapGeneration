@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using Geometry.DataStructure;
+
 namespace Geometry
 {
 	public class MeshData
@@ -19,6 +21,38 @@ namespace Geometry
 	public static class MeshGenerator
 	{
 		private const float goldenRatio = 1.618033989f;
+
+		public static MeshData CreateMeshFromHalfEdgePolygon(HalfEdgeData polygonData)
+		{
+			var vertices = polygonData.vertices;
+			var faces = polygonData.faces;
+
+			var newTriangles = new List<int>();
+			var newVertices = new List<Vector3>(vertices);
+			newVertices.Capacity += faces.Length;
+			for (int i = 0; i < faces.Length; i++)
+			{
+				var face = faces[i];
+
+				var newVertexIndex = newVertices.Count;
+
+				var polygon = new Vector3[face.edgeCount];
+				var halfEdge = face.First;
+				for (int j = 0; j < face.edgeCount; j++)
+				{
+					newTriangles.Add(newVertexIndex);
+					newTriangles.Add(halfEdge.vertexIndex);
+					newTriangles.Add(halfEdge.Next.vertexIndex);
+
+					polygon[j] = halfEdge.Vertex;
+					halfEdge = halfEdge.Next;
+				}
+
+				newVertices.Add(GeometryUtility.CalculateBarycenter(polygon));
+			}
+
+			return new MeshData(newVertices.ToArray(), newTriangles.ToArray());
+		}
 
 		public static MeshData CreateIcosahedron(float radius = 1.0f)
 		{
@@ -145,6 +179,13 @@ namespace Geometry
 			}
 
 			return new MeshData(vertices.ToArray(), triangles);
+		}
+		public static MeshData CreateGoldbergPolyhedron(float radius = 1.0f, int refininStep = 3)
+		{
+			var ico = CreateIcoSphere(radius, refininStep);
+			DataStructureBuilder.CreateDualMeshData(ico, out DualHalfEdgeData dualMesh);
+
+			return CreateMeshFromHalfEdgePolygon(dualMesh.polygonData);
 		}
 	}
 }
