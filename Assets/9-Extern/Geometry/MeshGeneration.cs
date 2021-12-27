@@ -6,67 +6,6 @@ using Geometry.DataStructure;
 
 namespace Geometry
 {
-	public class MeshData
-	{
-		private List<Color> colors = null;
-		private List<int> triangles = null;
-		private List<Vector3> vertices = null;
-
-		public int VerticesCount => vertices.Count;
-		public int TrianglesCount => triangles.Count;
-
-		public Color[] Colors => colors.ToArray();
-		public int[] Triangles => triangles.ToArray();
-		public Vector3[] Vertices => vertices.ToArray();
-
-		public MeshData()
-		{
-			triangles = new List<int>();
-			vertices = new List<Vector3>();
-			colors = new List<Color>();
-		}
-		public MeshData(Vector3[] vertices, int[] triangles)
-		{
-			this.vertices = new List<Vector3>(vertices);
-			this.triangles = new List<int>(triangles);
-			this.colors = new List<Color>();
-		}
-
-		public void AddVertex(Vector3 vertex)
-		{
-			vertices.Add(vertex);
-		}
-		public void AddTriangle(int index0, int index1, int index2)
-		{
-			triangles.Add(index0);
-			triangles.Add(index1);
-			triangles.Add(index2);
-		}
-		public void AddColor(Color color)
-		{
-			colors.Add(color);
-		}
-
-		public void ClearVertices()
-		{
-			vertices.Clear();
-		}
-		public void ClearTriangles()
-		{
-			triangles.Clear();
-		}
-		public void ClearColors()
-		{
-			colors.Clear();
-		}
-		public void Clear()
-		{
-			ClearVertices();
-			ClearTriangles();
-			ClearColors();
-		}
-	}
-
 	public static class MeshGenerator
 	{
 		private const float goldenRatio = 1.618033989f;
