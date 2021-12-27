@@ -91,14 +91,14 @@ namespace Geometry.DataStructure
 
 			public bool CreateHalfEdgeData(MeshData data, out HalfEdgeData result)
 			{
-				if (data == null || data.triangles == null || data.triangles.Length < 3 || data.vertices == null)
+				if (data == null || data.Triangles == null || data.Triangles.Length < 3 || data.Vertices == null)
 				{
 					result = null;
 					return false;
 				}
 
-				Initialize(data.vertices, data.triangles);
-				ComputeHalfEdges(data.triangles);
+				Initialize(data.Vertices, data.Triangles);
+				ComputeHalfEdges(data.Triangles);
 				ComputeEdges();
 				GenerateResult(out result);
 				Clear();

@@ -8,13 +8,49 @@ namespace Geometry
 {
 	public class MeshData
 	{
-		public int[] triangles = null;
-		public Vector3[] vertices = null;
+		private List<int> triangles = null;
+		private List<Vector3> vertices = null;
 
+		public int TrianglesCount => triangles.Count;
+		public int VerticesCount => vertices.Count;
+
+		public int[] Triangles => triangles.ToArray();
+		public Vector3[] Vertices => vertices.ToArray();
+
+		public MeshData()
+		{
+			triangles = new List<int>();
+			vertices = new List<Vector3>();
+		}
 		public MeshData(Vector3[] vertices, int[] triangles)
 		{
-			this.vertices = vertices;
-			this.triangles = triangles;
+			this.vertices = new List<Vector3>(vertices);
+			this.triangles = new List<int>(triangles);
+		}
+
+		public void AddVertex(Vector3 vertex)
+		{
+			vertices.Add(vertex);
+		}
+		public void AddTriangle(int index0, int index1, int index2)
+		{
+			triangles.Add(index0);
+			triangles.Add(index1);
+			triangles.Add(index2);
+		}
+
+		public void ClearVertices()
+		{
+			vertices.Clear();
+		}
+		public void ClearTriangles()
+		{
+			triangles.Clear();
+		}
+		public void Clear()
+		{
+			ClearVertices();
+			ClearTriangles();
 		}
 	}
 
@@ -106,8 +142,8 @@ namespace Geometry
 		{
 			var ico = CreateIcosahedron(radius);
 
-			var triangles = ico.triangles;
-			var vertices = new List<Vector3>(ico.vertices);
+			var triangles = ico.Triangles;
+			var vertices = new List<Vector3>(ico.Vertices);
 
 			for (int j = 0; j < refiningStep; j++)
 			{
