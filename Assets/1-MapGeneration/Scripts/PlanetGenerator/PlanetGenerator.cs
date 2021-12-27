@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 using Geometry;
 using Geometry.DataStructure;
 
@@ -20,10 +21,7 @@ public class PlanetGenerator : MonoBehaviour
 
 		planet = new Planet(dualMeshData.polygonData);
 		planet.ComputeTectonicPlates(planetTectonicPlateCount);
-		planet.ComputeGeometry();
-		planet.ComputeColor();
-		planet.ComputeMesh();
 
-		GetComponent<PlanetRenderer>().planet = planet;
+		GetComponent<PlanetRenderer>().SetPlanet(planet);
 	}
 }

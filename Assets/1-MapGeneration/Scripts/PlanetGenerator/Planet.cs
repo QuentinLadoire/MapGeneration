@@ -2,52 +2,60 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-using Geometry;
 using Geometry.DataStructure;
 
-using GeometryUtility = Geometry.GeometryUtility;
-
-public class TectonicPlate
+public struct Cell
 {
-	public List<int> cellList = new List<int>();
+	public int faceIndex;
+	public int plateIndex;
+
+	public Planet parentPlanet;
+
+	public Face Face => parentPlanet.polygonHalfEdgeData.faces[faceIndex];
+	public TectonicPlate Plate => parentPlanet.tectonicPlates[plateIndex];
+
+	public Cell(int faceIndex, int plateIndex, Planet parentPlanet)
+	{
+		this.faceIndex = faceIndex;
+		this.plateIndex = plateIndex;
+
+		this.parentPlanet = parentPlanet;
+	}
+}
+
+public struct TectonicPlate
+{
+	public Color color;
+	public List<int> cellIndexes;
+
+	public Planet parentPlanet;
+
+	public void AddCell(int cellIndex)
+	{
+		cellIndexes.Add(cellIndex);
+	}
+
+	public void ClearCells()
+	{
+		cellIndexes.Clear();
+	}
+
+	public TectonicPlate(Color color, Planet parentPlanet)
+	{
+		this.color = color;
+		this.cellIndexes = new List<int>();
+
+		this.parentPlanet = parentPlanet;
+	}
 }
 
 public class Planet
 {
-	private Mesh mesh = null;
-	private bool[] freeCells = null;
-	private MeshData meshData = null;
-	private TectonicPlate[] tectonicPlates = null;
-	private HalfEdgeData polygonHalfEdgeData = null;
+	public Cell[] cells = null;
+	public TectonicPlate[] tectonicPlates = null;
+	public HalfEdgeData polygonHalfEdgeData = null;
 
-	public Mesh Mesh => mesh;
-	public HalfEdgeData PolygonHalfEdgeData => polygonHalfEdgeData;
-
-	private void ComputeFace(Face face)
-	{
-		var polygon = new Vector3[face.edgeCount];
-
-		var faceEdgeCount = face.edgeCount;
-		var verticesCount = meshData.VerticesCount;
-
-		var halfEdge = face.First;
-		for (int i = 0; i < faceEdgeCount; i++)
-		{
-			polygon[i] = halfEdge.Vertex;
-
-			var firstIndex = verticesCount + i;
-			var secondIndex = (i != faceEdgeCount - 1) ? (verticesCount + i + 1) : verticesCount;
-			var thirdIndex = verticesCount + faceEdgeCount;
-
-			meshData.AddTriangle(firstIndex, secondIndex, thirdIndex);
-			meshData.AddVertex(halfEdge.Vertex);
-
-			halfEdge = halfEdge.Next;
-		}
-
-		meshData.AddVertex(GeometryUtility.CalculateBarycenter(polygon));
-	}
-	private bool ComputeTectonicPlate(int plateIndex, Queue<int> processingCellIndexes)
+	private bool ComputeTectonicPlate(int plateIndex, Queue<int> processingCellIndexes, bool[] freeCells)
 	{
 		if (processingCellIndexes.Count == 0)
 			return false;
@@ -57,7 +65,8 @@ public class Planet
 		{
 			freeCells[cellIndex] = false;
 
-			tectonicPlates[plateIndex].cellList.Add(cellIndex);
+			cells[cellIndex].plateIndex = plateIndex;
+			tectonicPlates[plateIndex].AddCell(cellIndex);
 
 			var face = polygonHalfEdgeData.faces[cellIndex];
 			var halfEdge = face.First;
@@ -74,89 +83,40 @@ public class Planet
 
 		return false;
 	}
-
-	public void ComputeTectonicPlates(int count = 5)
+	public void ComputeTectonicPlates(int plateCount = 5)
 	{
+		tectonicPlates = new TectonicPlate[plateCount];
+		for (int i = 0; i < plateCount; i++)
+			tectonicPlates[i] = new TectonicPlate(Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.5f, 1.0f), this);
+
+		var freeCells = new bool[cells.Length];
 		freeCells.Fill(true);
 
-		var faceCount = polygonHalfEdgeData.faces.Length;
-
-		var processingCellIndexQueue = new Queue<int>[count];
-		for (int i = 0; i < count; i++)
+		var processingCellIndexQueue = new Queue<int>[plateCount];
+		for (int i = 0; i < plateCount; i++)
 		{
 			processingCellIndexQueue[i] = new Queue<int>();
-			processingCellIndexQueue[i].Enqueue(Random.Range(0, faceCount));
+			processingCellIndexQueue[i].Enqueue(Random.Range(0, cells.Length));
 		}
 
-		tectonicPlates = new TectonicPlate[count];
-		for (int i = 0; i < count; i++)
-			tectonicPlates[i] = new TectonicPlate();
-
-		while (faceCount > 0)
+		var freeCellRemainingCount = freeCells.Length;
+		while (freeCellRemainingCount > 0)
 		{
-			for (int i = 0; i < count; i++)
+			for (int i = 0; i < plateCount; i++)
 			{
-				if (ComputeTectonicPlate(i, processingCellIndexQueue[i]))
-					faceCount--;
+				var queue = processingCellIndexQueue[i];
+				if (ComputeTectonicPlate(i, queue, freeCells))
+					freeCellRemainingCount--;
 			}
 		}
-	}
-	public void ComputeGeometry()
-	{
-		if (meshData == null)
-			meshData = new MeshData();
-
-		if (tectonicPlates != null)
-		{
-			for (int i = 0; i < tectonicPlates.Length; i++)
-			{
-				var cellList = tectonicPlates[i].cellList;
-				for (int j = 0; j < cellList.Count; j++)
-				{
-					var faceIndex = cellList[j];
-					var face = polygonHalfEdgeData.faces[faceIndex];
-					ComputeFace(face);
-				}
-			}
-		}
-		else
-		{
-			var faces = polygonHalfEdgeData.faces;
-			for (int i = 0; i < faces.Length; i++)
-				ComputeFace(faces[i]);
-		}
-	}
-	public void ComputeColor()
-	{
-		for (int i = 0; i < tectonicPlates.Length; i++)
-		{
-			var plateColor = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.5f, 1.0f);
-			var cellList = tectonicPlates[i].cellList;
-
-			for (int j = 0; j < cellList.Count; j++)
-			{
-				var edgeCount = polygonHalfEdgeData.faces[cellList[j]].edgeCount;
-				for (int k = 0; k < edgeCount + 1; k++)
-					meshData.AddColor(plateColor);
-			}
-		}
-	}
-
-	public void ComputeMesh()
-	{
-		if (mesh == null)
-			mesh = new Mesh();
-
-		mesh.SetVertices(meshData.Vertices);
-		mesh.SetTriangles(meshData.Triangles, 0);
-		mesh.SetColors(meshData.Colors);
-
-		mesh.RecalculateNormals();
 	}
 
 	public Planet(HalfEdgeData polygonHalfEdgeData)
 	{
 		this.polygonHalfEdgeData = polygonHalfEdgeData;
-		this.freeCells = new bool[this.polygonHalfEdgeData.faces.Length];
+
+		cells = new Cell[this.polygonHalfEdgeData.faces.Length];
+		for (int i = 0; i < this.polygonHalfEdgeData.faces.Length; i++)
+			cells[i] = new Cell(i, -1, this);
 	}
 }

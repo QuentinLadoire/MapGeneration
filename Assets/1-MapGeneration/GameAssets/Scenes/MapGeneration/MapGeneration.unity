@@ -264,9 +264,11 @@ MonoBehaviour:
   renderPolygonDataSetting:
     mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
     material: {fileID: 2100000, guid: 897713160644a6e4ab433d8a072608d3, type: 2}
-    tickness: 0.005
+    tickness: 0.002
   renderPlanet: 1
   renderPolygonData: 0
+  renderTectonicPlate: 1
+  renderTectonicPlateBorder: 0
 --- !u!114 &1703020476
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -281,7 +283,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   planetRadius: 0.5
   planetRefiningStep: 3
-  planetTectonicPlateCount: 10
+  planetTectonicPlateCount: 5
 --- !u!1 &1832047226
 GameObject:
   m_ObjectHideFlags: 0
