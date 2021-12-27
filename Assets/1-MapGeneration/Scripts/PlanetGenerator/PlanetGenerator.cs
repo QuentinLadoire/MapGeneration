@@ -8,7 +8,7 @@ using GeometryUtility = Geometry.GeometryUtility;
 
 public class TectonicPlate
 {
-	public int[] cells = null;
+	public List<int> cellList = new List<int>();
 }
 
 public class Planet
@@ -45,37 +45,97 @@ public class Planet
 
 		meshData.AddVertex(GeometryUtility.CalculateBarycenter(polygon));
 	}
-	public void ComputeGeometry()
+	private bool ComputeTectonicPlate(int plateIndex, Queue<int> processingCellIndexes)
 	{
-		if (meshData == null)
-			meshData = new MeshData();
+		if (processingCellIndexes.Count == 0)
+			return false;
 
-		var faces = polygonHalfEdgeData.faces;
-		for (int i = 0; i < faces.Length; i++)
-			ComputeFace(faces[i]);
-	}
+		var cellIndex = processingCellIndexes.Dequeue();
+		if (freeCells[cellIndex])
+		{
+			freeCells[cellIndex] = false;
 
-	private bool ComputeTectonicPlate(int plateIndex, int[] processingCellIndexes)
-	{
+			tectonicPlates[plateIndex].cellList.Add(cellIndex);
+
+			var face = polygonHalfEdgeData.faces[cellIndex];
+			var halfEdge = face.First;
+			for (int i = 0; i < face.edgeCount; i++)
+			{
+				var adjacentFaceIndex = halfEdge.Opposite.faceIndex;
+				processingCellIndexes.Enqueue(adjacentFaceIndex);
+
+				halfEdge = halfEdge.Next;
+			}
+
+			return true;
+		}
+
 		return false;
 	}
+
 	public void ComputeTectonicPlates(int count = 5)
 	{
 		freeCells.Fill(true);
 
 		var faceCount = polygonHalfEdgeData.faces.Length;
 
-		var processingCellIndexes = new int[count];
+		var processingCellIndexQueue = new Queue<int>[count];
 		for (int i = 0; i < count; i++)
-			processingCellIndexes[i] = Random.Range(0, faceCount);
+		{
+			processingCellIndexQueue[i] = new Queue<int>();
+			processingCellIndexQueue[i].Enqueue(Random.Range(0, faceCount));
+		}
 
 		tectonicPlates = new TectonicPlate[count];
+		for (int i = 0; i < count; i++)
+			tectonicPlates[i] = new TectonicPlate();
+
 		while (faceCount > 0)
 		{
 			for (int i = 0; i < count; i++)
 			{
-				if (ComputeTectonicPlate(i, processingCellIndexes))
+				if (ComputeTectonicPlate(i, processingCellIndexQueue[i]))
 					faceCount--;
+			}
+		}
+	}
+	public void ComputeGeometry()
+	{
+		if (meshData == null)
+			meshData = new MeshData();
+
+		if (tectonicPlates != null)
+		{
+			for (int i = 0; i < tectonicPlates.Length; i++)
+			{
+				var cellList = tectonicPlates[i].cellList;
+				for (int j = 0; j < cellList.Count; j++)
+				{
+					var faceIndex = cellList[j];
+					var face = polygonHalfEdgeData.faces[faceIndex];
+					ComputeFace(face);
+				}
+			}
+		}
+		else
+		{
+			var faces = polygonHalfEdgeData.faces;
+			for (int i = 0; i < faces.Length; i++)
+				ComputeFace(faces[i]);
+		}
+	}
+	public void ComputeColor()
+	{
+		for (int i = 0; i < tectonicPlates.Length; i++)
+		{
+			var plateColor = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.5f, 1.0f);
+			var cellList = tectonicPlates[i].cellList;
+			
+			for (int j = 0; j < cellList.Count; j++)
+			{
+				var edgeCount = polygonHalfEdgeData.faces[cellList[j]].edgeCount;
+				for (int k = 0; k < edgeCount + 1; k++)
+					meshData.AddColor(plateColor);
 			}
 		}
 	}
@@ -87,6 +147,7 @@ public class Planet
 
 		mesh.SetVertices(meshData.Vertices);
 		mesh.SetTriangles(meshData.Triangles, 0);
+		mesh.SetColors(meshData.Colors);
 
 		mesh.RecalculateNormals();
 	}
@@ -185,7 +246,9 @@ public class PlanetGenerator : MonoBehaviour
 		DataStructureBuilder.CreateDualMeshData(MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep), out dualMeshData);
 
 		planet = new Planet(dualMeshData.polygonData);
+		planet.ComputeTectonicPlates(planetTectonicPlateCount);
 		planet.ComputeGeometry();
+		planet.ComputeColor();
 		planet.ComputeMesh();
 
 		mesh = planet.Mesh;
