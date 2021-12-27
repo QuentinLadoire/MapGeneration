@@ -8,12 +8,14 @@ namespace Geometry
 {
 	public class MeshData
 	{
+		private List<Color> colors = null;
 		private List<int> triangles = null;
 		private List<Vector3> vertices = null;
 
-		public int TrianglesCount => triangles.Count;
 		public int VerticesCount => vertices.Count;
+		public int TrianglesCount => triangles.Count;
 
+		public Color[] Colors => colors.ToArray();
 		public int[] Triangles => triangles.ToArray();
 		public Vector3[] Vertices => vertices.ToArray();
 
@@ -21,11 +23,13 @@ namespace Geometry
 		{
 			triangles = new List<int>();
 			vertices = new List<Vector3>();
+			colors = new List<Color>();
 		}
 		public MeshData(Vector3[] vertices, int[] triangles)
 		{
 			this.vertices = new List<Vector3>(vertices);
 			this.triangles = new List<int>(triangles);
+			this.colors = new List<Color>();
 		}
 
 		public void AddVertex(Vector3 vertex)
@@ -38,6 +42,10 @@ namespace Geometry
 			triangles.Add(index1);
 			triangles.Add(index2);
 		}
+		public void AddColor(Color color)
+		{
+			colors.Add(color);
+		}
 
 		public void ClearVertices()
 		{
@@ -47,10 +55,15 @@ namespace Geometry
 		{
 			triangles.Clear();
 		}
+		public void ClearColors()
+		{
+			colors.Clear();
+		}
 		public void Clear()
 		{
 			ClearVertices();
 			ClearTriangles();
+			ClearColors();
 		}
 	}
 
