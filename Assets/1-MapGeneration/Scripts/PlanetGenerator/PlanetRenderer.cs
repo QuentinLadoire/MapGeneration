@@ -36,13 +36,12 @@ public class PlanetRenderer : MonoBehaviour
 		for (int i = 0; i < planet.cells.Length; i++)
 		{
 			var cell = planet.cells[i];
-			var cellCenter = planet.cellCenters[i];
 
 			var face = cell.Face;
 			var faceEdgeCount = face.edgeCount;
 			var verticesCount = meshData.VerticesCount;
 
-			meshData.AddVertex(cellCenter); //Add Center Cell Vertex
+			meshData.AddVertex(cell.center); //Add Center Cell Vertex
 
 			face.ForEachHalfEdge((halfEdge, index) =>
 			{
@@ -67,13 +66,17 @@ public class PlanetRenderer : MonoBehaviour
 
 	private void ComputePlateCellsColor()
 	{
+		var colors = new Color[planet.tectonicPlates.Length];
+		for (int i = 0; i < planet.tectonicPlates.Length; i++)
+			colors[i] = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
+
 		for (int i = 0; i < planet.cells.Length; i++)
 		{
 			var cell = planet.cells[i];
 			var plate = cell.Plate;
 
-			meshData.AddColor(plate.color);									 //Cell Center Vertex Color
-			cell.Face.ForEachHalfEdge(() => meshData.AddColor(plate.color)); //Cell Corner Vertex Color
+			meshData.AddColor(colors[cell.plateIndex]);									 //Cell Center Vertex Color
+			cell.Face.ForEachHalfEdge(() => meshData.AddColor(colors[cell.plateIndex])); //Cell Corner Vertex Color
 		}
 	}
 	private void ComputePlateTypeCellsColor()

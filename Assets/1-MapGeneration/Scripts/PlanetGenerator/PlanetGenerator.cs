@@ -36,9 +36,8 @@ public class PlanetGenerator : MonoBehaviour
 		for (int i = 0; i < plateLenght; i++)
 		{
 			var isOceanic = Random.value < oceanicRate;
-			var color = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
 
-			planet.tectonicPlates[i] = new TectonicPlate(isOceanic, color, planet);
+			planet.tectonicPlates[i] = new TectonicPlate(isOceanic, planet);
 		}
 	}
 
@@ -62,7 +61,7 @@ public class PlanetGenerator : MonoBehaviour
 
 				if (!cell.IsAssign)
 				{
-					cell.plateIndex = plateIndex;
+					cell.plateIndex = i;
 					plate.AddCell(cellIndex);
 
 					hasAddCell = true;
@@ -119,7 +118,6 @@ public class PlanetGenerator : MonoBehaviour
 		var plateLenght = tectonicPlateCount;
 
 		var cell = planet.cells[i];
-		var cellCenter = planet.cellCenters[i];
 		if (!cell.IsAssign)
 		{
 			var plates = planet.tectonicPlates;
@@ -127,9 +125,9 @@ public class PlanetGenerator : MonoBehaviour
 			var nearestPlateIndex = -1;
 			for (int j = 0; j < plateLenght; j++)
 			{
-				var plateCenter = planet.cellCenters[plates[j].GetCenterCellIndex()];
+				var plateCenter = plates[j].GetCenterCell().center;
 
-				var toTest = (cellCenter - plateCenter).sqrMagnitude;
+				var toTest = (cell.center - plateCenter).sqrMagnitude;
 				if (toTest < sqrMagnitude)
 				{
 					nearestPlateIndex = j;

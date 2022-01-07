@@ -8,25 +8,14 @@ public class Cell
 {
 	public int faceIndex = -1;
 	public int plateIndex = -1;
-
 	public bool isBorder = false;
+	public Vector3 center = Vector3.zero;
 
 	public Planet parentPlanet = null;
 
 	public bool IsAssign => plateIndex != -1;
-
-	public Face Face => parentPlanet.polygonHalfEdgeData.faces[faceIndex];
 	public TectonicPlate Plate => parentPlanet.tectonicPlates[plateIndex];
-
-	public Cell(int faceIndex, Planet parentPlanet)
-	{
-		this.faceIndex = faceIndex;
-		this.plateIndex = -1;
-
-		this.isBorder = false;
-
-		this.parentPlanet = parentPlanet;
-	}
+	public Face Face => parentPlanet.polygonHalfEdgeData.faces[faceIndex];
 }
 
 public class TectonicPlate
@@ -35,8 +24,6 @@ public class TectonicPlate
 	private List<int> borderCellIndexes = new List<int>();
 
 	public bool isOceanic = false;
-
-	public Color color = Color.white;
 
 	public Planet parentPlanet = null;
 
@@ -92,9 +79,8 @@ public class TectonicPlate
 		ClearBorderCells();
 	}
 
-	public TectonicPlate(bool isOceanic, Color color, Planet parentPlanet)
+	public TectonicPlate(bool isOceanic, Planet parentPlanet)
 	{
-		this.color = color;
 		this.isOceanic = isOceanic;
 		this.cellIndexes = new List<int>();
 		this.borderCellIndexes = new List<int>();
@@ -106,7 +92,6 @@ public class TectonicPlate
 public class Planet
 {
 	public Cell[] cells = null;
-	public Vector3[] cellCenters = null;
 	public TectonicPlate[] tectonicPlates = null;
 	public HalfEdgeData polygonHalfEdgeData = null;
 
@@ -115,19 +100,19 @@ public class Planet
 		this.polygonHalfEdgeData = polygonHalfEdgeData;
 
 		cells = new Cell[this.polygonHalfEdgeData.faces.Length];
-		cellCenters = new Vector3[this.polygonHalfEdgeData.faces.Length];
 		for (int i = 0; i < this.polygonHalfEdgeData.faces.Length; i++)
 		{
-			cells[i] = new Cell(i, this);
-
 			var face = this.polygonHalfEdgeData.faces[i];
 			var polygon = new Vector3[face.edgeCount];
-			face.ForEachHalfEdge((halfEdge, index) =>
-			{
-				polygon[index] = halfEdge.Vertex;
-			});
+			face.ForEachHalfEdge((halfEdge, index) => polygon[index] = halfEdge.Vertex);
+			var cellCenter = Geometry.GeometryUtility.CalculateBarycenter(polygon);
 
-			cellCenters[i] = Geometry.GeometryUtility.CalculateBarycenter(polygon);
+			cells[i] = new Cell
+			{
+				faceIndex = i,
+				center = cellCenter,
+				parentPlanet = this
+			};
 		}
 	}
 }
