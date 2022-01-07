@@ -4,46 +4,97 @@ using UnityEngine;
 
 using Geometry.DataStructure;
 
-public struct Cell
+public class Cell
 {
-	public int faceIndex;
-	public int plateIndex;
+	public int faceIndex = -1;
+	public int plateIndex = -1;
 
-	public Planet parentPlanet;
+	public bool isBorder = false;
+
+	public Planet parentPlanet = null;
+
+	public bool IsAssign => plateIndex != -1;
 
 	public Face Face => parentPlanet.polygonHalfEdgeData.faces[faceIndex];
 	public TectonicPlate Plate => parentPlanet.tectonicPlates[plateIndex];
 
-	public Cell(int faceIndex, int plateIndex, Planet parentPlanet)
+	public Cell(int faceIndex, Planet parentPlanet)
 	{
 		this.faceIndex = faceIndex;
-		this.plateIndex = plateIndex;
+		this.plateIndex = -1;
+
+		this.isBorder = false;
 
 		this.parentPlanet = parentPlanet;
 	}
 }
 
-public struct TectonicPlate
+public class TectonicPlate
 {
-	public Color color;
-	public List<int> cellIndexes;
+	private List<int> cellIndexes = new List<int>();
+	private List<int> borderCellIndexes = new List<int>();
 
-	public Planet parentPlanet;
+	public Color color = Color.white;
+
+	public Planet parentPlanet = null;
+
+	public int CellCount => cellIndexes.Count;
+	public int BorderCellCount => borderCellIndexes.Count;
 
 	public void AddCell(int cellIndex)
 	{
 		cellIndexes.Add(cellIndex);
+	}
+	public void AddBorderCell(int cellIndex)
+	{
+		borderCellIndexes.Add(cellIndex);
+	}
+
+	public int GetCenterCellIndex()
+	{
+		return cellIndexes[0];
+	}
+	public int GetCellIndex(int index)
+	{
+		return cellIndexes[index];
+	}
+	public int GetBorderCellIndex(int index)
+	{
+		return cellIndexes[borderCellIndexes[index]];
+	}
+
+	public Cell GetCenterCell()
+	{
+		return parentPlanet.cells[cellIndexes[0]];
+	}
+	public Cell GetCellAt(int index)
+	{
+		return parentPlanet.cells[cellIndexes[index]];
+	}
+	public Cell GetBorderCellAt(int index)
+	{
+		return parentPlanet.cells[cellIndexes[borderCellIndexes[index]]];
 	}
 
 	public void ClearCells()
 	{
 		cellIndexes.Clear();
 	}
+	public void ClearBorderCells()
+	{
+		borderCellIndexes.Clear();
+	}
+	public void Clear()
+	{
+		ClearCells();
+		ClearBorderCells();
+	}
 
 	public TectonicPlate(Color color, Planet parentPlanet)
 	{
 		this.color = color;
 		this.cellIndexes = new List<int>();
+		this.borderCellIndexes = new List<int>();
 
 		this.parentPlanet = parentPlanet;
 	}
@@ -52,71 +103,31 @@ public struct TectonicPlate
 public class Planet
 {
 	public Cell[] cells = null;
+	public Vector3[] cellCenters = null;
 	public TectonicPlate[] tectonicPlates = null;
 	public HalfEdgeData polygonHalfEdgeData = null;
-
-	private bool ComputeTectonicPlate(int plateIndex, Queue<int> processingCellIndexes, bool[] freeCells)
-	{
-		if (processingCellIndexes.Count == 0)
-			return false;
-
-		var cellIndex = processingCellIndexes.Dequeue();
-		if (freeCells[cellIndex])
-		{
-			freeCells[cellIndex] = false;
-
-			cells[cellIndex].plateIndex = plateIndex;
-			tectonicPlates[plateIndex].AddCell(cellIndex);
-
-			var face = polygonHalfEdgeData.faces[cellIndex];
-			var halfEdge = face.First;
-			for (int i = 0; i < face.edgeCount; i++)
-			{
-				var adjacentFaceIndex = halfEdge.Opposite.faceIndex;
-				processingCellIndexes.Enqueue(adjacentFaceIndex);
-
-				halfEdge = halfEdge.Next;
-			}
-
-			return true;
-		}
-
-		return false;
-	}
-	public void ComputeTectonicPlates(int plateCount = 5)
-	{
-		tectonicPlates = new TectonicPlate[plateCount];
-		for (int i = 0; i < plateCount; i++)
-			tectonicPlates[i] = new TectonicPlate(Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.5f, 1.0f), this);
-
-		var freeCells = new bool[cells.Length];
-		freeCells.Fill(true);
-
-		var processingCellIndexQueue = new Queue<int>[plateCount];
-		for (int i = 0; i < plateCount; i++)
-		{
-			processingCellIndexQueue[i] = new Queue<int>();
-			processingCellIndexQueue[i].Enqueue(Random.Range(0, cells.Length));
-		}
-
-		var freeCellRemainingCount = freeCells.Length;
-		while (freeCellRemainingCount > 0)
-		{
-			for (int i = 0; i < plateCount; i++)
-			{
-				var queue = processingCellIndexQueue[i];
-				if (ComputeTectonicPlate(i, queue, freeCells))
-					freeCellRemainingCount--;
-			}
-		}
-	}
 
 	public Planet(HalfEdgeData polygonHalfEdgeData)
 	{
 		this.polygonHalfEdgeData = polygonHalfEdgeData;
 
 		cells = new Cell[this.polygonHalfEdgeData.faces.Length];
+		cellCenters = new Vector3[this.polygonHalfEdgeData.faces.Length];
 		for (int i = 0; i < this.polygonHalfEdgeData.faces.Length; i++)
-			cells[i] = new Cell(i, -1, this);
+		{
+			cells[i] = new Cell(i, this);
+
+			var face = this.polygonHalfEdgeData.faces[i];
+			var polygon = new Vector3[face.edgeCount];
+			var halfEdge = face.First;
+			for (int j = 0; j < face.edgeCount; j++)
+			{
+				polygon[j] = halfEdge.Vertex;
+
+				halfEdge = halfEdge.Next;
+			}
+
+			cellCenters[i] = Geometry.GeometryUtility.CalculateBarycenter(polygon);
+		}
 	}
 }

@@ -20,9 +20,8 @@ public class PlanetRenderer : MonoBehaviour
 	[SerializeField] private bool renderPlanet = false;
 	[SerializeField] private bool renderPolygonData = false;
 	[SerializeField] private bool renderTectonicPlate = false;
-	[SerializeField] private bool renderTectonicPlateBorder = false;
 
-	private Mesh mesh = null;
+	[SerializeField] private Mesh mesh = null;
 	private Planet planet = null;
 	private MeshData meshData = new MeshData();
 
@@ -81,13 +80,20 @@ public class PlanetRenderer : MonoBehaviour
 		var cells = planet.cells;
 		for (int i = 0; i < cells.Length; i++)
 		{
-			var plateColor = cells[i].Plate.color;
 			var face = cells[i].Face;
-			ComputeFaceColor(face, meshData, plateColor);
+			if (cells[i].plateIndex != -1)
+			{
+				var plateColor = cells[i].Plate.color;
+				ComputeFaceColor(face, meshData, plateColor);
+			}
+			else
+			{
+				ComputeFaceColor(face, meshData, Color.white);
+			}
 		}
 	}
 
-	private void RecalculateMeshData()
+	public void RecalculateMeshData()
 	{
 		if (meshData != null)
 			meshData.Clear();
@@ -97,7 +103,7 @@ public class PlanetRenderer : MonoBehaviour
 		if (renderTectonicPlate)
 			ComputeTectonicPlatesColor();
 	}
-	private void RecalculateMesh()
+	public void RecalculateMesh()
 	{
 		if (mesh == null)
 			mesh = new Mesh();
@@ -107,6 +113,8 @@ public class PlanetRenderer : MonoBehaviour
 		mesh.SetColors(meshData.Colors);
 
 		mesh.RecalculateNormals();
+
+		//mesh.UploadMeshData(true);
 	}
 
 	public void SetPlanet(Planet planet)
