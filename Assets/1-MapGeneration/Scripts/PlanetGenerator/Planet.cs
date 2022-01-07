@@ -34,6 +34,8 @@ public class TectonicPlate
 	private List<int> cellIndexes = new List<int>();
 	private List<int> borderCellIndexes = new List<int>();
 
+	public bool isOceanic = false;
+
 	public Color color = Color.white;
 
 	public Planet parentPlanet = null;
@@ -90,9 +92,10 @@ public class TectonicPlate
 		ClearBorderCells();
 	}
 
-	public TectonicPlate(Color color, Planet parentPlanet)
+	public TectonicPlate(bool isOceanic, Color color, Planet parentPlanet)
 	{
 		this.color = color;
+		this.isOceanic = isOceanic;
 		this.cellIndexes = new List<int>();
 		this.borderCellIndexes = new List<int>();
 
@@ -119,13 +122,10 @@ public class Planet
 
 			var face = this.polygonHalfEdgeData.faces[i];
 			var polygon = new Vector3[face.edgeCount];
-			var halfEdge = face.First;
-			for (int j = 0; j < face.edgeCount; j++)
+			face.ForEachHalfEdge((halfEdge, index) =>
 			{
-				polygon[j] = halfEdge.Vertex;
-
-				halfEdge = halfEdge.Next;
-			}
+				polygon[index] = halfEdge.Vertex;
+			});
 
 			cellCenters[i] = Geometry.GeometryUtility.CalculateBarycenter(polygon);
 		}

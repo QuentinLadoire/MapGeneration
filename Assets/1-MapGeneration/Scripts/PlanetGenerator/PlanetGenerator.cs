@@ -5,8 +5,6 @@ using UnityEngine;
 using Geometry;
 using Geometry.DataStructure;
 
-using GeometryUtility = Geometry.GeometryUtility;
-
 [ExecuteAlways]
 public class PlanetGenerator : MonoBehaviour
 {
@@ -22,7 +20,27 @@ public class PlanetGenerator : MonoBehaviour
 	private int remainingFreeCellCount = 0;
 	private Queue<int>[] processingCellIndexQueue = null;
 
-	public bool HasFinish => remainingFreeCellCount == 0;
+	public bool HasFinish => remainingFreeCellCount == 0 || voronoiStepIndex == planet.cells.Length;
+
+	public void InitializePlanet()
+	{
+		DataStructureBuilder.CreateDualMeshData(MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep), out DualHalfEdgeData dualMeshData);
+
+		planet = new Planet(dualMeshData.polygonData);
+	}
+	public void InitializePlates()
+	{
+		var plateLenght = tectonicPlateCount;
+
+		planet.tectonicPlates = new TectonicPlate[plateLenght];
+		for (int i = 0; i < plateLenght; i++)
+		{
+			var isOceanic = Random.value < oceanicRate;
+			var color = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
+
+			planet.tectonicPlates[i] = new TectonicPlate(isOceanic, color, planet);
+		}
+	}
 
 	private void BreathFirstFloodFillStep()
 	{
@@ -68,6 +86,34 @@ public class PlanetGenerator : MonoBehaviour
 			while (!hasAddCell && queue.Count != 0);
 		}
 	}
+	public void InitializeBFS()
+	{
+		var plateLenght = tectonicPlateCount;
+
+		processingCellIndexQueue = new Queue<int>[plateLenght];
+		for (int i = 0; i < plateLenght; i++)
+		{
+			processingCellIndexQueue[i] = new Queue<int>();
+			processingCellIndexQueue[i].Enqueue(Random.Range(0, planet.cells.Length));
+		}
+
+		remainingFreeCellCount = planet.cells.Length;
+	}
+	public void BFSProcessPlates()
+	{
+		while (remainingFreeCellCount > 0)
+		{
+			BreathFirstFloodFillStep();
+		}
+	}
+	public void BFSProcessPlatesStepByStep()
+	{
+		if (remainingFreeCellCount > 0)
+		{
+			BreathFirstFloodFillStep();
+		}
+	}
+
 	private void VoronoiFloodFillStep(int i)
 	{
 		var plateLenght = tectonicPlateCount;
@@ -95,39 +141,6 @@ public class PlanetGenerator : MonoBehaviour
 			plates[nearestPlateIndex].AddCell(i);
 		}
 	}
-
-	public void InitializePlanet()
-	{
-		DataStructureBuilder.CreateDualMeshData(MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep), out DualHalfEdgeData dualMeshData);
-
-		planet = new Planet(dualMeshData.polygonData);
-
-		GetComponent<PlanetRenderer>().SetPlanet(planet);
-	}
-	public void InitializePlates()
-	{
-		var plateLenght = tectonicPlateCount;
-
-		planet.tectonicPlates = new TectonicPlate[plateLenght];
-		for (int i = 0; i < plateLenght; i++)
-		{
-			var color = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
-			planet.tectonicPlates[i] = new TectonicPlate(color, planet);
-		}
-	}
-	public void InitializeBFS()
-	{
-		var plateLenght = tectonicPlateCount;
-
-		processingCellIndexQueue = new Queue<int>[plateLenght];
-		for (int i = 0; i < plateLenght; i++)
-		{
-			processingCellIndexQueue[i] = new Queue<int>();
-			processingCellIndexQueue[i].Enqueue(Random.Range(0, planet.cells.Length));
-		}
-
-		remainingFreeCellCount = planet.cells.Length;
-	}
 	public void InitializeVoronoi()
 	{
 		var plateLenght = tectonicPlateCount;
@@ -142,37 +155,12 @@ public class PlanetGenerator : MonoBehaviour
 
 		voronoiStepIndex = 0;
 	}
-
-	public void BFSProcessPlates()
-	{
-		while (remainingFreeCellCount > 0)
-		{
-			BreathFirstFloodFillStep();
-		}
-
-		GetComponent<PlanetRenderer>().ComputeTectonicPlatesColor();
-		GetComponent<PlanetRenderer>().RecalculateMesh();
-	}
-	public void BFSProcessPlatesStepByStep()
-	{
-		if (remainingFreeCellCount > 0)
-		{
-			BreathFirstFloodFillStep();
-		}
-
-		GetComponent<PlanetRenderer>().ComputeTectonicPlatesColor();
-		GetComponent<PlanetRenderer>().RecalculateMesh();
-	}
-
 	public void VoronoiProcessPlates()
 	{
 		for (int i = 0; i < planet.cells.Length; i++)
 		{
 			VoronoiFloodFillStep(i);
 		}
-
-		GetComponent<PlanetRenderer>().ComputeTectonicPlatesColor();
-		GetComponent<PlanetRenderer>().RecalculateMesh();
 	}
 	public void VoronoiProcessPlatesStepByStep()
 	{
@@ -181,8 +169,15 @@ public class PlanetGenerator : MonoBehaviour
 			VoronoiFloodFillStep(voronoiStepIndex);
 			voronoiStepIndex++;
 		}
+	}
 
-		GetComponent<PlanetRenderer>().ComputeTectonicPlatesColor();
-		GetComponent<PlanetRenderer>().RecalculateMesh();
+	public void Generate()
+	{
+		InitializePlanet();
+		InitializePlates();
+		InitializeVoronoi();
+		VoronoiProcessPlates();
+
+		GetComponent<PlanetRenderer>().SetPlanet(planet);
 	}
 }

@@ -55,4 +55,31 @@ namespace Geometry.DataStructure
 			DrawHalfEdgeData(data, setting.mesh, setting.material, matrix, setting.tickness);
 		}
 	}
+
+	public static class DataStructureExtension
+	{
+		public delegate void CallBack();
+		public delegate void HalfEdgeCallback(HalfEdge halfEdge, int index);
+
+		public static void ForEachHalfEdge(this Face face, CallBack callback)
+		{
+			var halfEdge = face.First;
+			for (int i = 0; i < face.edgeCount; i++)
+			{
+				callback.Invoke();
+
+				halfEdge = halfEdge.Next;
+			}
+		}
+		public static void ForEachHalfEdge(this Face face, HalfEdgeCallback callback)
+		{
+			var halfEdge = face.First;
+			for (int i = 0; i < face.edgeCount; i++)
+			{
+				callback.Invoke(halfEdge, i);
+
+				halfEdge = halfEdge.Next;
+			}
+		}
+	}
 }

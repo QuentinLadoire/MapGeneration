@@ -5,13 +5,19 @@ using UnityEngine;
 using Geometry;
 using Geometry.DataStructure;
 
-using GeometryUtility = Geometry.GeometryUtility;
-
 [ExecuteAlways]
 public class PlanetRenderer : MonoBehaviour
 {
+	public enum RenderMode
+	{
+		Plates,
+		PlatesType
+	}
+
 	[Header("Planet Setting")]
 	[SerializeField] private Material material = null;
+	[SerializeField] private Color oceanColor = Color.white;
+	[SerializeField] private Color groundColor = Color.white;
 
 	[Header("Debug Settings")]
 	[SerializeField] private RenderHalfEdgeSetting renderPolygonDataSetting = RenderHalfEdgeSetting.Default;
@@ -19,102 +25,122 @@ public class PlanetRenderer : MonoBehaviour
 	[Header("Render Options")]
 	[SerializeField] private bool renderPlanet = false;
 	[SerializeField] private bool renderPolygonData = false;
-	[SerializeField] private bool renderTectonicPlate = false;
+	[SerializeField] private RenderMode renderMode = RenderMode.Plates;
 
 	[SerializeField] private Mesh mesh = null;
 	private Planet planet = null;
-	private MeshData meshData = new MeshData();
+	private MeshData meshData = null;
 
-	private void ComputeFaceGeometry(Face face)
+	private void ComputeCellsGeometry()
 	{
-		var polygon = new Vector3[face.edgeCount];
-
-		var faceEdgeCount = face.edgeCount;
-		var verticesCount = meshData.VerticesCount;
-
-		var halfEdge = face.First;
-		for (int i = 0; i < faceEdgeCount; i++)
+		for (int i = 0; i < planet.cells.Length; i++)
 		{
-			polygon[i] = halfEdge.Vertex;
+			var cell = planet.cells[i];
+			var cellCenter = planet.cellCenters[i];
 
-			var firstIndex = verticesCount + i;
-			var secondIndex = (i != faceEdgeCount - 1) ? (verticesCount + i + 1) : verticesCount;
-			var thirdIndex = verticesCount + faceEdgeCount;
+			var face = cell.Face;
+			var faceEdgeCount = face.edgeCount;
+			var verticesCount = meshData.VerticesCount;
 
-			meshData.AddTriangle(firstIndex, secondIndex, thirdIndex);
-			meshData.AddVertex(halfEdge.Vertex);
+			meshData.AddVertex(cellCenter); //Add Center Cell Vertex
 
-			halfEdge = halfEdge.Next;
+			face.ForEachHalfEdge((halfEdge, index) =>
+			{
+				var firstIndex = verticesCount;										//Center Cell Index
+				var secondIndex = verticesCount + index + 1;						//Current HalfEdge Vertex Index
+				var thirdIndex = verticesCount + ((index + 1) % faceEdgeCount) + 1; //Next HalfEdge Vertex Index, clamp to [0, FaceEdgeCount[
+
+				meshData.AddTriangle(firstIndex, secondIndex, thirdIndex);
+				meshData.AddVertex(halfEdge.Vertex);
+			});
 		}
-
-		meshData.AddVertex(GeometryUtility.CalculateBarycenter(polygon));
 	}
-	public void ComputeGeometry()
+	public void RecalculateGeometry()
 	{
 		if (meshData == null)
 			meshData = new MeshData();
-		else
-		{
-			meshData.ClearVertices();
-			meshData.ClearTriangles();
-		}
 
-		var cells = planet.cells;
-		for (int i = 0; i < cells.Length; i++)
-		{
-			var face = cells[i].Face;
-			ComputeFaceGeometry(face);
-		}
+		meshData.Clear();
+
+		ComputeCellsGeometry();
 	}
 
-	private void ComputeFaceColor(Face face, MeshData meshData, Color color)
+	private void ComputePlateCellsColor()
 	{
-		var edgeCount = face.edgeCount;
-		for (int i = 0; i < edgeCount + 1; i++) //+1 for the barycenter vertex
-			meshData.AddColor(color);
+		for (int i = 0; i < planet.cells.Length; i++)
+		{
+			var cell = planet.cells[i];
+			var plate = cell.Plate;
+
+			meshData.AddColor(plate.color);									 //Cell Center Vertex Color
+			cell.Face.ForEachHalfEdge(() => meshData.AddColor(plate.color)); //Cell Corner Vertex Color
+		}
 	}
-	public void ComputeTectonicPlatesColor()
+	private void ComputePlateTypeCellsColor()
+	{
+		for (int i = 0; i < planet.cells.Length; i++)
+		{
+			var cell = planet.cells[i];
+			var plate = cell.Plate;
+
+			var color = plate.isOceanic ? oceanColor : groundColor;
+
+			meshData.AddColor(color);                                  //Cell Center Vertex Color
+			cell.Face.ForEachHalfEdge(() => meshData.AddColor(color)); //Cell Corner Vertex Color
+		}
+	}
+	private void ComputeCellsColor()
+	{
+		switch (renderMode)
+		{
+			case RenderMode.Plates:
+				ComputePlateCellsColor();
+				break;
+
+			case RenderMode.PlatesType:
+				ComputePlateTypeCellsColor();
+				break;
+		}
+	}
+	public void RecalculateColors()
 	{
 		meshData.ClearColors();
 
-		var cells = planet.cells;
-		for (int i = 0; i < cells.Length; i++)
-		{
-			var face = cells[i].Face;
-			if (cells[i].plateIndex != -1)
-			{
-				var plateColor = cells[i].Plate.color;
-				ComputeFaceColor(face, meshData, plateColor);
-			}
-			else
-			{
-				ComputeFaceColor(face, meshData, Color.white);
-			}
-		}
+		ComputeCellsColor();
 	}
 
 	public void RecalculateMeshData()
 	{
-		if (meshData != null)
-			meshData.Clear();
+		if (meshData == null)
+			meshData = new MeshData();
 
-		ComputeGeometry();
+		meshData.Clear();
 
-		if (renderTectonicPlate)
-			ComputeTectonicPlatesColor();
+		RecalculateGeometry();
+		RecalculateColors();
 	}
-	public void RecalculateMesh()
+
+	public void ApplyMeshGeometry()
 	{
 		if (mesh == null)
 			mesh = new Mesh();
 
 		mesh.SetVertices(meshData.Vertices);
 		mesh.SetTriangles(meshData.Triangles, 0);
-		mesh.SetColors(meshData.Colors);
 
 		mesh.RecalculateNormals();
+	}
+	public void ApplyMeshColor()
+	{
+		mesh.SetColors(meshData.Colors);
+	}
+	public void RecalculateMesh()
+	{
+		if (mesh == null)
+			mesh = new Mesh();
 
-		//mesh.UploadMeshData(true);
+		ApplyMeshGeometry();
+		ApplyMeshColor();
 	}
 
 	public void SetPlanet(Planet planet)
@@ -132,22 +158,24 @@ public class PlanetRenderer : MonoBehaviour
 	}
 	private void DrawPolygonData()
 	{
-		if (planet.polygonHalfEdgeData == null) return;
+		if (planet == null || planet.polygonHalfEdgeData == null) return;
 
 		if (renderPolygonData && renderPolygonDataSetting.mesh != null && renderPolygonDataSetting.material != null)
 			DataStructureUtility.DrawHalfEdgeData(planet.polygonHalfEdgeData, renderPolygonDataSetting, transform.localToWorldMatrix);
-	}
-	private void DrawDebug()
-	{
-		if (planet == null) return;
-
-		DrawPolygonData();
 	}
 
 	private void Update()
 	{
 		DrawPlanet();
 
-		DrawDebug();
+		DrawPolygonData();
+	}
+
+	private void OnValidate()
+	{
+		if (planet == null) return;
+
+		RecalculateColors();
+		ApplyMeshColor();
 	}
 }
