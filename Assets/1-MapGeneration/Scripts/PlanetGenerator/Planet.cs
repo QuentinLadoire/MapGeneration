@@ -8,8 +8,10 @@ public class Cell
 {
 	public int faceIndex = -1;
 	public int plateIndex = -1;
+
 	public bool isBorder = false;
 	public Vector3 center = Vector3.zero;
+	public Vector3 normal = Vector3.zero;
 
 	public Planet parentPlanet = null;
 
@@ -23,9 +25,12 @@ public class TectonicPlate
 	private List<int> cellIndexes = new List<int>();
 	private List<int> borderCellIndexes = new List<int>();
 
+	public Planet parentPlanet = null;
+
 	public bool isOceanic = false;
 
-	public Planet parentPlanet = null;
+	public float angularVelocity = 0.0f;
+	public Vector3 rotationAxis = Vector3.zero;
 
 	public int CellCount => cellIndexes.Count;
 	public int BorderCellCount => borderCellIndexes.Count;
@@ -78,19 +83,12 @@ public class TectonicPlate
 		ClearCells();
 		ClearBorderCells();
 	}
-
-	public TectonicPlate(bool isOceanic, Planet parentPlanet)
-	{
-		this.isOceanic = isOceanic;
-		this.cellIndexes = new List<int>();
-		this.borderCellIndexes = new List<int>();
-
-		this.parentPlanet = parentPlanet;
-	}
 }
 
 public class Planet
 {
+	public float radius = 1.0f;
+
 	public Cell[] cells = null;
 	public TectonicPlate[] tectonicPlates = null;
 	public HalfEdgeData polygonHalfEdgeData = null;
@@ -107,10 +105,15 @@ public class Planet
 			face.ForEachHalfEdge((halfEdge, index) => polygon[index] = halfEdge.Vertex);
 			var cellCenter = Geometry.GeometryUtility.CalculateBarycenter(polygon);
 
+			var forward = face.First.Vertex - cellCenter;
+			var normal = Vector3.Cross(forward, (face.Last.Vertex - cellCenter)).normalized * -1.0f;
+
 			cells[i] = new Cell
 			{
 				faceIndex = i,
 				center = cellCenter,
+				normal = normal,
+
 				parentPlanet = this
 			};
 		}

@@ -9,10 +9,12 @@ using Geometry.DataStructure;
 public class PlanetGenerator : MonoBehaviour
 {
 	[Header("Planet Settings")]
+	[SerializeField] private int seed = 0;
 	[SerializeField] private float planetRadius = 1.0f;
 	[SerializeField] private int planetRefiningStep = 3;
 	[SerializeField] private int tectonicPlateCount = 5;
-	[SerializeField] [Range(0.0f, 1.0f)] private float oceanicRate = 0.7f;
+	[SerializeField] private float angularVelocityMax = 1.0f;
+	[SerializeField][Range(0.0f, 1.0f)] private float oceanicRate = 0.7f;
 
 	private Planet planet = null;
 
@@ -21,6 +23,9 @@ public class PlanetGenerator : MonoBehaviour
 		DataStructureBuilder.CreateDualMeshData(MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep), out DualHalfEdgeData dualMeshData);
 
 		planet = new Planet(dualMeshData.polygonData);
+		planet.radius = planetRadius;
+
+		Random.InitState(seed);
 	}
 	public void InitializePlates()
 	{
@@ -29,25 +34,28 @@ public class PlanetGenerator : MonoBehaviour
 		planet.tectonicPlates = new TectonicPlate[plateLenght];
 		for (int i = 0; i < plateLenght; i++)
 		{
+			var cellIndex = Random.Range(0, planet.cells.Length);
+
+			var rotationAxis = Random.onUnitSphere;
+			var angularVelocity = Mathf.Clamp(Random.value, 0.1f, 1.0f) * angularVelocityMax;
+
 			var isOceanic = Random.value < oceanicRate;
 
-			planet.tectonicPlates[i] = new TectonicPlate(isOceanic, planet);
-		}
-	}
+			planet.tectonicPlates[i] = new TectonicPlate
+			{
+				parentPlanet = planet,
 
-	public void InitializeVoronoi()
-	{
-		var plateLenght = tectonicPlateCount;
-
-		for (int i = 0; i < plateLenght; i++)
-		{
-			var cellIndex = Random.Range(0, planet.cells.Length);
+				isOceanic = isOceanic,
+				rotationAxis = rotationAxis,
+				angularVelocity = angularVelocity
+			};
 
 			planet.cells[cellIndex].plateIndex = i;
 			planet.tectonicPlates[i].AddCell(cellIndex);
 		}
 	}
-	public void VoronoiProcessPlates()
+
+	public void ProcessPlatesWithVoronoi()
 	{
 		var plateLenght = tectonicPlateCount;
 		for (int i = 0; i < planet.cells.Length; i++)
@@ -80,8 +88,7 @@ public class PlanetGenerator : MonoBehaviour
 	{
 		InitializePlanet();
 		InitializePlates();
-		InitializeVoronoi();
-		VoronoiProcessPlates();
+		ProcessPlatesWithVoronoi();
 
 		GetComponent<PlanetRenderer>().SetPlanet(planet);
 	}
