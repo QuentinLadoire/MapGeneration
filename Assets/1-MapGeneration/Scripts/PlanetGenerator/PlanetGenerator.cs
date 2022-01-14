@@ -84,11 +84,34 @@ public class PlanetGenerator : MonoBehaviour
 		}
 	}
 
+	public void DeterminePlateBorder()
+	{
+		var platesBorders = new List<int>[planet.tectonicPlates.Length];
+		for (int i = 0; i < platesBorders.Length; i++)
+			platesBorders[i] = new List<int>();
+
+		for (int i = 0; i < planet.cells.Length; i++)
+		{
+			var cell = planet.cells[i];
+			cell.Face.ForEachHalfEdge((halfEdge, index) =>
+			{
+				var otherCell = planet.cells[halfEdge.Opposite.faceIndex];
+
+				if (cell.plateIndex != otherCell.plateIndex)
+				{
+					cell.Plate.AddBorderVertex(halfEdge.vertexIndex);
+					cell.Plate.AddBorderVertex(halfEdge.Next.vertexIndex);
+				}
+			});
+		}
+	}
+
 	public void Generate()
 	{
 		InitializePlanet();
 		InitializePlates();
 		ProcessPlatesWithVoronoi();
+		DeterminePlateBorder();
 
 		GetComponent<PlanetRenderer>().SetPlanet(planet);
 	}

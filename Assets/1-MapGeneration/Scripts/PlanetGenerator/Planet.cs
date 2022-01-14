@@ -24,6 +24,7 @@ public class TectonicPlate
 {
 	private List<int> cellIndexes = new List<int>();
 	private List<int> borderCellIndexes = new List<int>();
+	private List<int> borderVertexIndexes = new List<int>();
 
 	public Planet parentPlanet = null;
 
@@ -34,6 +35,7 @@ public class TectonicPlate
 
 	public int CellCount => cellIndexes.Count;
 	public int BorderCellCount => borderCellIndexes.Count;
+	public int BorderVerticesCount => borderVertexIndexes.Count;
 
 	public void AddCell(int cellIndex)
 	{
@@ -42,6 +44,10 @@ public class TectonicPlate
 	public void AddBorderCell(int cellIndex)
 	{
 		borderCellIndexes.Add(cellIndex);
+	}
+	public void AddBorderVertex(int borderIndex)
+	{
+		borderVertexIndexes.Add(borderIndex);
 	}
 
 	public int GetCenterCellIndex()
@@ -56,6 +62,10 @@ public class TectonicPlate
 	{
 		return cellIndexes[borderCellIndexes[index]];
 	}
+	public int GetBorderVertexIndex(int index)
+	{
+		return borderVertexIndexes[index];
+	}
 
 	public Cell GetCenterCell()
 	{
@@ -69,6 +79,10 @@ public class TectonicPlate
 	{
 		return parentPlanet.cells[cellIndexes[borderCellIndexes[index]]];
 	}
+	public Vector3 GetBorderVertex(int index)
+	{
+		return parentPlanet.polygonHalfEdgeData.vertices[borderVertexIndexes[index]];
+	}
 
 	public void ClearCells()
 	{
@@ -78,10 +92,15 @@ public class TectonicPlate
 	{
 		borderCellIndexes.Clear();
 	}
+	public void ClearBorderVertices()
+	{
+		borderVertexIndexes.Clear();
+	}
 	public void Clear()
 	{
 		ClearCells();
 		ClearBorderCells();
+		ClearBorderVertices();
 	}
 }
 

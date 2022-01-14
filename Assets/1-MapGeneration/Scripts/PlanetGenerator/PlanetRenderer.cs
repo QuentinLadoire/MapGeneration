@@ -10,13 +10,11 @@ public struct RenderPlateMovementSetting
 {
 	public Mesh mesh;
 	public Material material;
-	public float tickness;
 
 	public static RenderPlateMovementSetting Default = new RenderPlateMovementSetting
 	{
 		mesh = null,
-		material = null,
-		tickness = 0.005f
+		material = null
 	};
 }
 
@@ -41,6 +39,7 @@ public class PlanetRenderer : MonoBehaviour
 	[Header("Render Options")]
 	[SerializeField] private bool renderPlanet = false;
 	[SerializeField] private bool renderPolygonData = false;
+	[SerializeField] private bool renderPlateBorder = false;
 	[SerializeField] private bool renderPlateMovement = false;
 	[SerializeField] private RenderMode renderMode = RenderMode.Plates;
 
@@ -172,7 +171,7 @@ public class PlanetRenderer : MonoBehaviour
 		RecalculateMesh();
 	}
 
-	private void DrawMovementForCells(int offset, int count, Mesh mesh, Material material, Matrix4x4 matrix, float tickness)
+	private void DrawMovementForCells(int offset, int count, Mesh mesh, Material material, Matrix4x4 matrix)
 	{
 		var matrices = new List<Matrix4x4>(count);
 		for (int j = 0; j < count; j++)
@@ -211,10 +210,35 @@ public class PlanetRenderer : MonoBehaviour
 
 		var drawCount = planet.cells.Length / 1023;
 		for (int i = 0; i < drawCount; i++)
-			DrawMovementForCells(1023 * i, 1023, renderPlateMovementSetting.mesh, renderPlateMovementSetting.material, transform.localToWorldMatrix, renderPlateMovementSetting.tickness);
+			DrawMovementForCells(1023 * i, 1023, renderPlateMovementSetting.mesh, renderPlateMovementSetting.material, transform.localToWorldMatrix);
 
 		var countLeft = planet.cells.Length - 1023 * drawCount;
-		DrawMovementForCells(1023 * drawCount, countLeft, renderPlateMovementSetting.mesh, renderPlateMovementSetting.material, transform.localToWorldMatrix, renderPlateMovementSetting.tickness);
+		DrawMovementForCells(1023 * drawCount, countLeft, renderPlateMovementSetting.mesh, renderPlateMovementSetting.material, transform.localToWorldMatrix);
+	}
+	private void DrawPlateBorder()
+	{
+		if (planet == null || !renderPlateBorder) return;
+
+		for (int i = 0; i < planet.tectonicPlates.Length; i++)
+		{
+			var plate = planet.tectonicPlates[i];
+
+			var matrices = new List<Matrix4x4>();
+			for (int j = 0; j < plate.BorderVerticesCount; j += 2)
+			{
+				var first = plate.GetBorderVertex(j);
+				var second = plate.GetBorderVertex(j + 1);
+
+				var forward = second - first;
+
+				var translation = (first + second) * 0.5f;
+				var rotation = Quaternion.LookRotation(forward);
+
+				matrices.Add(transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, new Vector3(renderPolygonDataSetting.tickness, renderPolygonDataSetting.tickness, forward.magnitude)));
+			}
+
+			Graphics.DrawMeshInstanced(renderPolygonDataSetting.mesh, 0, renderPolygonDataSetting.material, matrices);
+		}
 	}
 
 	private void Update()
@@ -224,6 +248,8 @@ public class PlanetRenderer : MonoBehaviour
 		DrawPolygonData();
 
 		DrawPlateMovement();
+
+		DrawPlateBorder();
 	}
 
 	private void OnValidate()
