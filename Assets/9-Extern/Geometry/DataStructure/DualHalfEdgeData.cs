@@ -14,6 +14,8 @@ namespace Geometry.DataStructure
 
 		public int faceIndex;
 
+		public int edgeIndex;
+
 		public HalfEdgeData parentData;
 
 		public Vector3 Vertex => parentData.vertices[vertexIndex];
@@ -33,6 +35,8 @@ namespace Geometry.DataStructure
 			this.oppositeIndex = oppositeIndex;
 
 			this.faceIndex = faceIndex;
+
+			this.edgeIndex = -1;
 
 			this.parentData = parentData;
 		}
@@ -61,6 +65,7 @@ namespace Geometry.DataStructure
 		public HalfEdge First => parentData.halfEdges[firstIndex];
 		public HalfEdge Last => parentData.halfEdges[lastIndex];
 
+		public int HalfEdgeCount => halfEdgeIndexes.Length;
 		public HalfEdge GetHalfEdgeAt(int index)
 		{
 			return parentData.halfEdges[halfEdgeIndexes[index]];

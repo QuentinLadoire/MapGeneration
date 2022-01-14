@@ -4,6 +4,15 @@ using UnityEngine;
 
 using Geometry.DataStructure;
 
+public class Boundaries
+{
+	public Planet parentPlanet = null;
+
+	public int edgeIndex = -1;
+
+	public Edge Edge => parentPlanet.polygonHalfEdgeData.edges[edgeIndex];
+}
+
 public class Cell
 {
 	public Planet parentPlanet = null;
@@ -35,7 +44,7 @@ public class TectonicPlate
 
 	public float angularMagnitude = 0.0f;
 	public Vector3 angularAxis = Vector3.zero;
-	public Vector3 AngularVelocity => angularAxis* angularMagnitude;
+	public Vector3 AngularVelocity => angularAxis * angularMagnitude;
 
 	public Cell CellOrigin => parentPlanet.cells[cellIndexes[0]];
 
@@ -89,6 +98,8 @@ public class Planet
 	public Cell[] cells = null;
 	public TectonicPlate[] tectonicPlates = null;
 	public HalfEdgeData polygonHalfEdgeData = null;
+
+	public List<Boundaries> boundaries = new List<Boundaries>();
 
 	public Planet(HalfEdgeData polygonHalfEdgeData)
 	{

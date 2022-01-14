@@ -45,7 +45,18 @@ public class PlanetGenerator : MonoBehaviour
 		cell.plateIndex = plateIndex;
 		plate.AddCell(cellIndex);
 
+		cell.Face.ForEachHalfEdge((halfEdge, index) =>
+		{
+			var adjacentCell = planet.cells[halfEdge.Opposite.faceIndex];
+			if (adjacentCell.IsAssign && adjacentCell.plateIndex != plateIndex)
+			{
+				var border = new Boundaries();
+				border.parentPlanet = planet;
+				border.edgeIndex = halfEdge.edgeIndex;
 
+				planet.boundaries.Add(border);
+			}
+		});
 	}
 
 	public void InitializePlanet()
@@ -81,8 +92,7 @@ public class PlanetGenerator : MonoBehaviour
 				angularMagnitude = angularMagnitude
 			};
 
-			planet.cells[cellIndex].plateIndex = i;
-			planet.tectonicPlates[i].AddCell(cellIndex);
+			AddCellToPlate(cellIndex, i);
 		}
 	}
 	public void AssignCellToPlates()

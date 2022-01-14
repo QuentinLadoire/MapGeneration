@@ -56,6 +56,7 @@ namespace Geometry.DataStructure
 
 					halfEdgeDataResult.edges[edgeIndex].parentData = halfEdgeDataResult;
 					halfEdgeDataResult.edges[edgeIndex].firstHalfEdge = current;
+					halfEdgeDataResult.halfEdges[current].edgeIndex = edgeIndex;
 
 					for (int i = 1; i < processList.Count; i++)
 					{
@@ -68,6 +69,7 @@ namespace Geometry.DataStructure
 							halfEdgeDataResult.halfEdges[toTest].oppositeIndex = current;
 
 							halfEdgeDataResult.edges[edgeIndex].secondHalfEdge = toTest;
+							halfEdgeDataResult.halfEdges[toTest].edgeIndex = edgeIndex;
 
 							processList.RemoveAt(i);
 
@@ -203,6 +205,7 @@ namespace Geometry.DataStructure
 
 					halfEdgeDataResult.edges[edgeIndex].parentData = halfEdgeDataResult;
 					halfEdgeDataResult.edges[edgeIndex].firstHalfEdge = current;
+					halfEdgeDataResult.halfEdges[current].edgeIndex = edgeIndex;
 
 					for (int i = 1; i < processList.Count; i++)
 					{
@@ -215,6 +218,7 @@ namespace Geometry.DataStructure
 							halfEdgeDataResult.halfEdges[toTest].oppositeIndex = current;
 
 							halfEdgeDataResult.edges[edgeIndex].secondHalfEdge = toTest;
+							halfEdgeDataResult.halfEdges[toTest].edgeIndex = edgeIndex;
 
 							processList.RemoveAt(i);
 

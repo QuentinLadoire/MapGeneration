@@ -56,7 +56,7 @@ public class PlanetRenderer : MonoBehaviour
 			var cell = planet.cells[i];
 
 			var face = cell.Face;
-			var faceEdgeCount = face.halfEdgeIndexes.Length;
+			var faceEdgeCount = face.HalfEdgeCount;
 			var verticesCount = meshData.VerticesCount;
 
 			meshData.AddVertex(cell.position); //Add Center Cell Vertex
@@ -217,26 +217,48 @@ public class PlanetRenderer : MonoBehaviour
 	{
 		if (planet == null || !renderPlateBorder) return;
 
-		for (int i = 0; i < planet.tectonicPlates.Length; i++)
+		int drawCount = planet.boundaries.Count / 1023;
+		for (int i = 0; i < drawCount; i++)
 		{
-			var plate = planet.tectonicPlates[i];
-
-			var matrices = new List<Matrix4x4>();
-			for (int j = 0; j < plate.BorderVerticesCount; j += 2)
+			var matrices = new List<Matrix4x4>(1023);
+			for (int j = 0; j < 1023; j++)
 			{
-				var first = plate.GetBorderVertexAt(j);
-				var second = plate.GetBorderVertexAt(j + 1);
+				var border = planet.boundaries[j + i * 1023];
 
-				var forward = second - first;
+				var p0 = border.Edge.FirstHalfEdge.Vertex;
+				var p1 = border.Edge.SecondHalfEdge.Vertex;
 
-				var translation = (first + second) * 0.5f;
+				var forward = p1 - p0;
+
+				var translation = (p0 + p1) * 0.5f;
 				var rotation = Quaternion.LookRotation(forward);
+				var scale = new Vector3(renderPolygonDataSetting.tickness, renderPolygonDataSetting.tickness, forward.magnitude);
 
-				matrices.Add(transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, new Vector3(renderPolygonDataSetting.tickness, renderPolygonDataSetting.tickness, forward.magnitude)));
+				matrices.Add(transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, scale));
 			}
 
 			Graphics.DrawMeshInstanced(renderPolygonDataSetting.mesh, 0, renderPolygonDataSetting.material, matrices);
 		}
+
+		var countLeft = planet.boundaries.Count - 1023 * drawCount;
+		var matrices2 = new List<Matrix4x4>(countLeft);
+		for (int i = 0; i < countLeft; i++)
+		{
+			var border = planet.boundaries[i + drawCount * 1023];
+
+			var p0 = border.Edge.FirstHalfEdge.Vertex;
+			var p1 = border.Edge.SecondHalfEdge.Vertex;
+
+			var forward = p1 - p0;
+
+			var translation = (p0 + p1) * 0.5f;
+			var rotation = Quaternion.LookRotation(forward);
+			var scale = new Vector3(renderPolygonDataSetting.tickness, renderPolygonDataSetting.tickness, forward.magnitude);
+
+			matrices2.Add(transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, scale));
+		}
+
+		Graphics.DrawMeshInstanced(renderPolygonDataSetting.mesh, 0, renderPolygonDataSetting.material, matrices2);
 	}
 
 	private void Update()
