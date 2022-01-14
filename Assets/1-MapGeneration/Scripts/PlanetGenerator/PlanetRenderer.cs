@@ -56,7 +56,7 @@ public class PlanetRenderer : MonoBehaviour
 			var cell = planet.cells[i];
 
 			var face = cell.Face;
-			var faceEdgeCount = face.edgeCount;
+			var faceEdgeCount = face.halfEdgeIndexes.Length;
 			var verticesCount = meshData.VerticesCount;
 
 			meshData.AddVertex(cell.position); //Add Center Cell Vertex
@@ -224,8 +224,8 @@ public class PlanetRenderer : MonoBehaviour
 			var matrices = new List<Matrix4x4>();
 			for (int j = 0; j < plate.BorderVerticesCount; j += 2)
 			{
-				var first = plate.GetBorderVertex(j);
-				var second = plate.GetBorderVertex(j + 1);
+				var first = plate.GetBorderVertexAt(j);
+				var second = plate.GetBorderVertexAt(j + 1);
 
 				var forward = second - first;
 

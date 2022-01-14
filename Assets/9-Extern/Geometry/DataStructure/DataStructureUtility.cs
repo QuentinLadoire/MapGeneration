@@ -63,22 +63,16 @@ namespace Geometry.DataStructure
 
 		public static void ForEachHalfEdge(this Face face, CallBack callback)
 		{
-			var halfEdge = face.First;
-			for (int i = 0; i < face.edgeCount; i++)
+			for (int i = 0; i < face.halfEdgeIndexes.Length; i++)
 			{
 				callback.Invoke();
-
-				halfEdge = halfEdge.Next;
 			}
 		}
 		public static void ForEachHalfEdge(this Face face, HalfEdgeCallback callback)
 		{
-			var halfEdge = face.First;
-			for (int i = 0; i < face.edgeCount; i++)
+			for (int i = 0; i < face.halfEdgeIndexes.Length; i++)
 			{
-				callback.Invoke(halfEdge, i);
-
-				halfEdge = halfEdge.Next;
+				callback.Invoke(face.GetHalfEdgeAt(i), i);
 			}
 		}
 	}

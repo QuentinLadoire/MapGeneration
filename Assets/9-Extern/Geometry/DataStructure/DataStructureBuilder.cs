@@ -178,8 +178,9 @@ namespace Geometry.DataStructure
 						var nextIndex = (i != faceEdgeCount - 1) ? i + 1 : 0;
 						var previousIndex = (i != 0) ? i - 1 : faceEdgeCount - 1;
 
+						halfEdgeDataResult.faces[faceIndex].halfEdgeIndexes[i] = halfEdgesCount + i;
 						halfEdgeDataResult.halfEdges[halfEdgesCount + i] = new HalfEdge(vertexIndex, halfEdgesCount + nextIndex, halfEdgesCount + previousIndex, -1, faceIndex, halfEdgeDataResult);
-						
+
 						processList.Remove(processIndex);
 
 						processIndex = triangleHalfEdge.Opposite.previousIndex;

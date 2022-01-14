@@ -54,19 +54,24 @@ namespace Geometry.DataStructure
 		public int firstIndex;
 		public int lastIndex;
 
-		public int edgeCount;
+		public int[] halfEdgeIndexes;
 
 		public HalfEdgeData parentData;
 
 		public HalfEdge First => parentData.halfEdges[firstIndex];
 		public HalfEdge Last => parentData.halfEdges[lastIndex];
 
-		public Face(int firstIndex, int lastIndex, int edgeCount, HalfEdgeData parentData)
+		public HalfEdge GetHalfEdgeAt(int index)
+		{
+			return parentData.halfEdges[halfEdgeIndexes[index]];
+		}
+
+		public Face(int firstIndex, int lastIndex, int halfEdgeCount, HalfEdgeData parentData)
 		{
 			this.firstIndex = firstIndex;
 			this.lastIndex = lastIndex;
 
-			this.edgeCount = edgeCount;
+			this.halfEdgeIndexes = new int[halfEdgeCount];
 
 			this.parentData = parentData;
 		}

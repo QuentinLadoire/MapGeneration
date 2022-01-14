@@ -24,9 +24,9 @@ namespace Geometry
 
 				var newVertexIndex = newVertices.Count;
 
-				var polygon = new Vector3[face.edgeCount];
+				var polygon = new Vector3[face.halfEdgeIndexes.Length];
 				var halfEdge = face.First;
-				for (int j = 0; j < face.edgeCount; j++)
+				for (int j = 0; j < face.halfEdgeIndexes.Length; j++)
 				{
 					newTriangles.Add(newVertexIndex);
 					newTriangles.Add(halfEdge.vertexIndex);

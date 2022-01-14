@@ -18,6 +18,36 @@ public class PlanetGenerator : MonoBehaviour
 
 	private Planet planet = null;
 
+	private int GetNearestPlateIndex(Cell cell)
+	{
+		var plates = planet.tectonicPlates;
+
+		var nearestPlateIndex = -1;
+		var sqrMagnitude = float.MaxValue;
+		for (int i = 0; i < planet.tectonicPlates.Length; i++)
+		{
+			var plateCenter = plates[i].CellOrigin.position;
+			var toTest = (cell.position - plateCenter).sqrMagnitude;
+			if (toTest < sqrMagnitude)
+			{
+				nearestPlateIndex = i;
+				sqrMagnitude = toTest;
+			}
+		}
+
+		return nearestPlateIndex;
+	}
+	private void AddCellToPlate(int cellIndex, int plateIndex)
+	{
+		var cell = planet.cells[cellIndex];
+		var plate = planet.tectonicPlates[plateIndex];
+
+		cell.plateIndex = plateIndex;
+		plate.AddCell(cellIndex);
+
+
+	}
+
 	public void InitializePlanet()
 	{
 		DataStructureBuilder.CreateDualMeshData(MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep), out DualHalfEdgeData dualMeshData);
@@ -55,32 +85,16 @@ public class PlanetGenerator : MonoBehaviour
 			planet.tectonicPlates[i].AddCell(cellIndex);
 		}
 	}
-
-	public void ProcessPlatesWithVoronoi()
+	public void AssignCellToPlates()
 	{
-		var plateLenght = tectonicPlateCount;
 		for (int i = 0; i < planet.cells.Length; i++)
 		{
 			var cell = planet.cells[i];
 			if (!cell.IsAssign)
 			{
-				var plates = planet.tectonicPlates;
-				var sqrMagnitude = float.MaxValue;
-				var nearestPlateIndex = -1;
-				for (int j = 0; j < plateLenght; j++)
-				{
-					var plateCenter = plates[j].CellOrigin.position;
+				var nearestPlateIndex = GetNearestPlateIndex(cell);
 
-					var toTest = (cell.position - plateCenter).sqrMagnitude;
-					if (toTest < sqrMagnitude)
-					{
-						nearestPlateIndex = j;
-						sqrMagnitude = toTest;
-					}
-				}
-
-				cell.plateIndex = nearestPlateIndex;
-				plates[nearestPlateIndex].AddCell(i);
+				AddCellToPlate(i, nearestPlateIndex);
 			}
 		}
 	}
@@ -110,7 +124,7 @@ public class PlanetGenerator : MonoBehaviour
 	{
 		InitializePlanet();
 		InitializePlates();
-		ProcessPlatesWithVoronoi();
+		AssignCellToPlates();
 		DeterminePlateBorder();
 
 		GetComponent<PlanetRenderer>().SetPlanet(planet);

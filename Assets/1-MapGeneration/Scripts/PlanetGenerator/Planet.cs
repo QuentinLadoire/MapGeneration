@@ -11,16 +11,16 @@ public class Cell
 	public int faceIndex = -1;
 	public int plateIndex = -1;
 
-	public bool isBorder = false;
 	public Vector3 normal = Vector3.zero;
 	public Vector3 position = Vector3.zero;
 
 	public float linearMagnitude = 0.0f;
 	public Vector3 linearDirection = Vector3.zero;
+	public Vector3 LinearVelocity => linearDirection * linearMagnitude;
 
 	public bool IsAssign => plateIndex != -1;
-	public Vector3 LinearVelocity => linearDirection * linearMagnitude;
 	public TectonicPlate Plate => parentPlanet.tectonicPlates[plateIndex];
+
 	public Face Face => parentPlanet.polygonHalfEdgeData.faces[faceIndex];
 }
 
@@ -61,7 +61,7 @@ public class TectonicPlate
 	{
 		return parentPlanet.cells[cellIndexes[index]];
 	}
-	public Vector3 GetBorderVertex(int index)
+	public Vector3 GetBorderVertexAt(int index)
 	{
 		return parentPlanet.polygonHalfEdgeData.vertices[borderVertexIndexes[index]];
 	}
@@ -98,7 +98,7 @@ public class Planet
 		for (int i = 0; i < this.polygonHalfEdgeData.faces.Length; i++)
 		{
 			var face = this.polygonHalfEdgeData.faces[i];
-			var polygon = new Vector3[face.edgeCount];
+			var polygon = new Vector3[face.halfEdgeIndexes.Length];
 			face.ForEachHalfEdge((halfEdge, index) => polygon[index] = halfEdge.Vertex);
 			var cellCenter = Geometry.GeometryUtility.CalculateBarycenter(polygon);
 
