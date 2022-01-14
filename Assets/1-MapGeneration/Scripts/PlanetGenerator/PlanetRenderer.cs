@@ -177,13 +177,11 @@ public class PlanetRenderer : MonoBehaviour
 		for (int j = 0; j < count; j++)
 		{
 			var cell = planet.cells[offset + j];
-			var forward = Vector3.Cross(cell.normal, cell.Plate.rotationAxis);
-
 			var cellRadius = (cell.Face.First.Vertex - cell.center).magnitude;
 
 			var translation = cell.center + cell.normal * 0.0001f;
-			var rotation = Quaternion.LookRotation(forward, cell.normal);
-			var scale = new Vector3(0.0025f * planet.radius, 1.0f, cell.Plate.angularVelocity / 5.0f * cellRadius);
+			var rotation = Quaternion.LookRotation(cell.linearDirection, cell.normal);
+			var scale = new Vector3(0.0025f * planet.radius, 1.0f, cell.linearMagnitude / 5.0f * cellRadius);
 
 			matrices.Add(matrix * Matrix4x4.TRS(translation, rotation, scale));
 		}

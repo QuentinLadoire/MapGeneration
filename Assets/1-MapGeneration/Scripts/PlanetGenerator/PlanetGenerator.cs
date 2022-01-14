@@ -36,8 +36,8 @@ public class PlanetGenerator : MonoBehaviour
 		{
 			var cellIndex = Random.Range(0, planet.cells.Length);
 
-			var rotationAxis = Random.onUnitSphere;
-			var angularVelocity = Mathf.Clamp(Random.value, 0.1f, 1.0f) * angularVelocityMax;
+			var angularAxis = Random.onUnitSphere;
+			var angularMagnitude = Mathf.Clamp(Random.value, 0.1f, 1.0f) * angularVelocityMax;
 
 			var isOceanic = Random.value < oceanicRate;
 
@@ -46,8 +46,8 @@ public class PlanetGenerator : MonoBehaviour
 				parentPlanet = planet,
 
 				isOceanic = isOceanic,
-				rotationAxis = rotationAxis,
-				angularVelocity = angularVelocity
+				angularAxis = angularAxis,
+				angularMagnitude = angularMagnitude
 			};
 
 			planet.cells[cellIndex].plateIndex = i;
@@ -83,7 +83,6 @@ public class PlanetGenerator : MonoBehaviour
 			}
 		}
 	}
-
 	public void DeterminePlateBorder()
 	{
 		var platesBorders = new List<int>[planet.tectonicPlates.Length];

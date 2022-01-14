@@ -13,7 +13,12 @@ public class Cell
 	public Vector3 center = Vector3.zero;
 	public Vector3 normal = Vector3.zero;
 
+	public float linearMagnitude = 0.0f;
+	public Vector3 linearDirection = Vector3.zero;
+
 	public Planet parentPlanet = null;
+
+	public Vector3 LinearVelocity => linearDirection * linearMagnitude;
 
 	public bool IsAssign => plateIndex != -1;
 	public TectonicPlate Plate => parentPlanet.tectonicPlates[plateIndex];
@@ -30,8 +35,10 @@ public class TectonicPlate
 
 	public bool isOceanic = false;
 
-	public float angularVelocity = 0.0f;
-	public Vector3 rotationAxis = Vector3.zero;
+	public float angularMagnitude = 0.0f;
+	public Vector3 angularAxis = Vector3.zero;
+
+	public Vector3 AngularVelocity => angularAxis* angularMagnitude;
 
 	public int CellCount => cellIndexes.Count;
 	public int BorderCellCount => borderCellIndexes.Count;
@@ -39,6 +46,12 @@ public class TectonicPlate
 
 	public void AddCell(int cellIndex)
 	{
+		var cell = parentPlanet.cells[cellIndex];
+
+		var linearVelocity = Vector3.Cross(AngularVelocity, cell.center);
+		cell.linearMagnitude = linearVelocity.magnitude;
+		cell.linearDirection = linearVelocity.normalized;
+
 		cellIndexes.Add(cellIndex);
 	}
 	public void AddBorderCell(int cellIndex)
