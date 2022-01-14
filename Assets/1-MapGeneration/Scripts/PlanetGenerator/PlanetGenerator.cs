@@ -24,6 +24,7 @@ public class PlanetGenerator : MonoBehaviour
 
 		planet = new Planet(dualMeshData.polygonData);
 		planet.radius = planetRadius;
+		planet.angularVelocityMax = angularVelocityMax;
 
 		Random.InitState(seed);
 	}
@@ -68,9 +69,9 @@ public class PlanetGenerator : MonoBehaviour
 				var nearestPlateIndex = -1;
 				for (int j = 0; j < plateLenght; j++)
 				{
-					var plateCenter = plates[j].GetCenterCell().center;
+					var plateCenter = plates[j].CellOrigin.position;
 
-					var toTest = (cell.center - plateCenter).sqrMagnitude;
+					var toTest = (cell.position - plateCenter).sqrMagnitude;
 					if (toTest < sqrMagnitude)
 					{
 						nearestPlateIndex = j;

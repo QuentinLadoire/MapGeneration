@@ -6,21 +6,20 @@ using Geometry.DataStructure;
 
 public class Cell
 {
+	public Planet parentPlanet = null;
+
 	public int faceIndex = -1;
 	public int plateIndex = -1;
 
 	public bool isBorder = false;
-	public Vector3 center = Vector3.zero;
 	public Vector3 normal = Vector3.zero;
+	public Vector3 position = Vector3.zero;
 
 	public float linearMagnitude = 0.0f;
 	public Vector3 linearDirection = Vector3.zero;
 
-	public Planet parentPlanet = null;
-
-	public Vector3 LinearVelocity => linearDirection * linearMagnitude;
-
 	public bool IsAssign => plateIndex != -1;
+	public Vector3 LinearVelocity => linearDirection * linearMagnitude;
 	public TectonicPlate Plate => parentPlanet.tectonicPlates[plateIndex];
 	public Face Face => parentPlanet.polygonHalfEdgeData.faces[faceIndex];
 }
@@ -28,7 +27,6 @@ public class Cell
 public class TectonicPlate
 {
 	private List<int> cellIndexes = new List<int>();
-	private List<int> borderCellIndexes = new List<int>();
 	private List<int> borderVertexIndexes = new List<int>();
 
 	public Planet parentPlanet = null;
@@ -37,89 +35,56 @@ public class TectonicPlate
 
 	public float angularMagnitude = 0.0f;
 	public Vector3 angularAxis = Vector3.zero;
-
 	public Vector3 AngularVelocity => angularAxis* angularMagnitude;
 
+	public Cell CellOrigin => parentPlanet.cells[cellIndexes[0]];
+
 	public int CellCount => cellIndexes.Count;
-	public int BorderCellCount => borderCellIndexes.Count;
 	public int BorderVerticesCount => borderVertexIndexes.Count;
 
 	public void AddCell(int cellIndex)
 	{
 		var cell = parentPlanet.cells[cellIndex];
 
-		var linearVelocity = Vector3.Cross(AngularVelocity, cell.center);
+		var linearVelocity = Vector3.Cross(AngularVelocity, cell.position);
 		cell.linearMagnitude = linearVelocity.magnitude;
 		cell.linearDirection = linearVelocity.normalized;
 
 		cellIndexes.Add(cellIndex);
-	}
-	public void AddBorderCell(int cellIndex)
-	{
-		borderCellIndexes.Add(cellIndex);
 	}
 	public void AddBorderVertex(int borderIndex)
 	{
 		borderVertexIndexes.Add(borderIndex);
 	}
 
-	public int GetCenterCellIndex()
-	{
-		return cellIndexes[0];
-	}
-	public int GetCellIndex(int index)
-	{
-		return cellIndexes[index];
-	}
-	public int GetBorderCellIndex(int index)
-	{
-		return cellIndexes[borderCellIndexes[index]];
-	}
-	public int GetBorderVertexIndex(int index)
-	{
-		return borderVertexIndexes[index];
-	}
-
-	public Cell GetCenterCell()
-	{
-		return parentPlanet.cells[cellIndexes[0]];
-	}
 	public Cell GetCellAt(int index)
 	{
 		return parentPlanet.cells[cellIndexes[index]];
-	}
-	public Cell GetBorderCellAt(int index)
-	{
-		return parentPlanet.cells[cellIndexes[borderCellIndexes[index]]];
 	}
 	public Vector3 GetBorderVertex(int index)
 	{
 		return parentPlanet.polygonHalfEdgeData.vertices[borderVertexIndexes[index]];
 	}
 
+	public void Clear()
+	{
+		ClearCells();
+		ClearBorderVertices();
+	}
 	public void ClearCells()
 	{
 		cellIndexes.Clear();
 	}
-	public void ClearBorderCells()
-	{
-		borderCellIndexes.Clear();
-	}
 	public void ClearBorderVertices()
 	{
 		borderVertexIndexes.Clear();
-	}
-	public void Clear()
-	{
-		ClearCells();
-		ClearBorderCells();
-		ClearBorderVertices();
 	}
 }
 
 public class Planet
 {
 	public float radius = 1.0f;
+	public float angularVelocityMax = 0.0f;
 
 	public Cell[] cells = null;
 	public TectonicPlate[] tectonicPlates = null;
@@ -143,7 +108,7 @@ public class Planet
 			cells[i] = new Cell
 			{
 				faceIndex = i,
-				center = cellCenter,
+				position = cellCenter,
 				normal = normal,
 
 				parentPlanet = this

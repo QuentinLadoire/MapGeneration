@@ -59,7 +59,7 @@ public class PlanetRenderer : MonoBehaviour
 			var faceEdgeCount = face.edgeCount;
 			var verticesCount = meshData.VerticesCount;
 
-			meshData.AddVertex(cell.center); //Add Center Cell Vertex
+			meshData.AddVertex(cell.position); //Add Center Cell Vertex
 
 			face.ForEachHalfEdge((halfEdge, index) =>
 			{
@@ -177,11 +177,11 @@ public class PlanetRenderer : MonoBehaviour
 		for (int j = 0; j < count; j++)
 		{
 			var cell = planet.cells[offset + j];
-			var cellRadius = (cell.Face.First.Vertex - cell.center).magnitude;
+			var cellRadius = (cell.Face.First.Vertex - cell.position).magnitude;
 
-			var translation = cell.center + cell.normal * 0.0001f;
+			var translation = cell.position + cell.normal * 0.0001f;
 			var rotation = Quaternion.LookRotation(cell.linearDirection, cell.normal);
-			var scale = new Vector3(0.0025f * planet.radius, 1.0f, cell.linearMagnitude / 5.0f * cellRadius);
+			var scale = new Vector3(0.0025f * planet.radius, 1.0f, cell.linearMagnitude / planet.angularVelocityMax * cellRadius);
 
 			matrices.Add(matrix * Matrix4x4.TRS(translation, rotation, scale));
 		}
