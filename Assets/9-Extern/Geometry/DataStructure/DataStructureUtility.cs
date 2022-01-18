@@ -4,21 +4,6 @@ using UnityEngine;
 
 namespace Geometry.DataStructure
 {
-	[System.Serializable]
-	public struct RenderHalfEdgeSetting
-	{
-		public Mesh mesh;
-		public Material material;
-		public float tickness;
-
-		public static RenderHalfEdgeSetting Default = new RenderHalfEdgeSetting
-		{
-			mesh = null,
-			material = null,
-			tickness = 0.005f
-		};
-	}
-
 	public static class DataStructureUtility
 	{
 		private static void DrawEdges(Edge[] edges, int offset, int count, Mesh mesh, Material material, Matrix4x4 matrix, float tickness)
@@ -49,10 +34,6 @@ namespace Geometry.DataStructure
 
 			var edgeCountLeft = edges.Length - 1023 * drawCount;
 			DrawEdges(edges, 1023 * drawCount, edgeCountLeft, mesh, material, matrix, tickness);
-		}
-		public static void DrawHalfEdgeData(HalfEdgeData data, RenderHalfEdgeSetting setting, Matrix4x4 matrix)
-		{
-			DrawHalfEdgeData(data, setting.mesh, setting.material, matrix, setting.tickness);
 		}
 	}
 
