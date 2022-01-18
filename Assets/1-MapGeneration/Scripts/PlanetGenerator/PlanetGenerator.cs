@@ -117,7 +117,7 @@ public class PlanetGenerator : MonoBehaviour
 		for (int i = 0; i < planet.boundaries.Count; i++)
 		{
 			var boundary = planet.boundaries[i];
-			var stress = boundary.LeftCell.LinearVelocity - boundary.RightCell.LinearVelocity;
+			var stress = boundary.RightCell.LinearVelocity - boundary.LeftCell.LinearVelocity;
 
 			var parallelDot = Vector3.Dot(stress, boundary.parallelVector);
 			var perpendicularDot = Vector3.Dot(stress, boundary.perpendicularVector);

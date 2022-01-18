@@ -267,7 +267,11 @@ MonoBehaviour:
     groundColor: {r: 0.1254895, g: 0.5660378, b: 0.12935394, a: 1}
   renderBoundaries:
     mesh: {fileID: 4300000, guid: 94260e0556c838d45a98fb9995e9fce0, type: 2}
-    material: {fileID: 2100000, guid: 897713160644a6e4ab433d8a072608d3, type: 2}
+    material: {fileID: 2100000, guid: c1c07882acc26dc4688498fef5d0a502, type: 2}
+    transformMaterial: {fileID: 2100000, guid: 1425e033ce42ffe4f87a06b355d12fea, type: 2}
+    convergentMaterial: {fileID: 2100000, guid: 54a525ee6528f3947a229907cf4e8ce3, type: 2}
+    divergentMaterial: {fileID: 2100000, guid: 44184c749da17d44383278469578bbbe, type: 2}
+    renderMode: 0
   renderPolygonData:
     mesh: {fileID: 4300000, guid: 94260e0556c838d45a98fb9995e9fce0, type: 2}
     material: {fileID: 2100000, guid: 897713160644a6e4ab433d8a072608d3, type: 2}
@@ -275,9 +279,9 @@ MonoBehaviour:
     mesh: {fileID: 4300000, guid: 50d18d58098cf234ab54232bafc25d65, type: 2}
     material: {fileID: 2100000, guid: 421d04ab47e460842a4244a7dfc3f048, type: 2}
   wantToRenderPlanet: 1
-  wantToRenderBoundaries: 0
+  wantToRenderBoundaries: 1
   wantToRenderPolygonData: 0
-  wantToRenderPlateMovement: 0
+  wantToRenderPlateMovement: 1
 --- !u!114 &1703020476
 MonoBehaviour:
   m_ObjectHideFlags: 0

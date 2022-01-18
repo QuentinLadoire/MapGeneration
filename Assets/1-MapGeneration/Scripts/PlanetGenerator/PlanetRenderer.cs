@@ -158,8 +158,18 @@ public class RenderPlanet
 [System.Serializable]
 public class RenderBoundaries
 {
+	public enum RenderMode
+	{
+		Boundary,
+		BoundaryType
+	}
+
 	public Mesh mesh = null;
 	public Material material = null;
+	public Material transformMaterial = null;
+	public Material convergentMaterial = null;
+	public Material divergentMaterial = null;
+	public RenderMode renderMode = RenderMode.Boundary;
 
 	private Planet planet = null;
 
@@ -182,24 +192,72 @@ public class RenderBoundaries
 
 		return Matrix4x4.TRS(translation, rotation, scale);
 	}
-	private void DrawBoundariesFor(int offset, int count, Matrix4x4 planetMatrice)
-	{
-		var matrices = new Matrix4x4[count];
-		for (int i = 0; i < count; i++)
-			matrices[i] = planetMatrice * GetBoundaryMatrice(planet.boundaries[offset + i]);
 
-		Graphics.DrawMeshInstanced(mesh, 0, material, matrices);
+	private void DrawBoundaries(List<Matrix4x4> matrices, int offset, int count, Material material)
+	{
+		Graphics.DrawMeshInstanced(mesh, 0, material, matrices.GetRange(offset, count));
 	}
+	private void DrawBoundariesFor(List<Matrix4x4> matrices, Material material)
+	{
+		var drawCount = matrices.Count / 1023;
+		for (int i = 0; i < drawCount; i++)
+			DrawBoundaries(matrices, 1023 * i, 1023, material);
+
+		var countLeft = matrices.Count - 1023 * drawCount;
+		DrawBoundaries(matrices, 1023 * drawCount, countLeft, material);
+	}
+	private void DrawBoundariesDefault(Matrix4x4 planetMatrice)
+	{
+		var matrices = new List<Matrix4x4>();
+		for (int i = 0; i < planet.boundaries.Count; i++)
+			matrices.Add(planetMatrice * GetBoundaryMatrice(planet.boundaries[i]));
+
+		DrawBoundariesFor(matrices, material);
+	}
+	private void DrawBoundariesType(Matrix4x4 planetMatrice)
+	{
+		var transformMatrices = new List<Matrix4x4>();
+		var convergentMatrices = new List<Matrix4x4>();
+		var divergentMatrices = new List<Matrix4x4>();
+
+		for (int i = 0; i < planet.boundaries.Count; i++)
+		{
+			var boundary = planet.boundaries[i];
+			switch (boundary.type)
+			{
+				case BoundaryType.Transform:
+					transformMatrices.Add(planetMatrice * GetBoundaryMatrice(boundary));
+					break;
+
+				case BoundaryType.Divergent:
+					divergentMatrices.Add(planetMatrice * GetBoundaryMatrice(boundary));
+					break;
+
+				case BoundaryType.Convergent:
+					convergentMatrices.Add(planetMatrice * GetBoundaryMatrice(boundary));
+					break;
+			}
+		}
+
+		DrawBoundariesFor(transformMatrices, transformMaterial);
+		DrawBoundariesFor(convergentMatrices, convergentMaterial);
+		DrawBoundariesFor(divergentMatrices, divergentMaterial);
+	}
+
 	public void DrawBoundaries(Matrix4x4 planetMatrice)
 	{
 		if (planet == null || mesh == null || material == null) return;
 
-		var drawCount = planet.boundaries.Count / 1023;
-		for (int i = 0; i < drawCount; i++)
-			DrawBoundariesFor(1023 * i, 1023, planetMatrice);
+		switch (renderMode)
+		{
+			case RenderMode.Boundary:
+				DrawBoundariesDefault(planetMatrice);
+				break;
 
-		var countLeft = planet.boundaries.Count - 1023 * drawCount;
-		DrawBoundariesFor(1023 * drawCount, countLeft, planetMatrice);
+			case RenderMode.BoundaryType:
+				DrawBoundariesType(planetMatrice);
+				break;
+		}
 	}
 }
 
