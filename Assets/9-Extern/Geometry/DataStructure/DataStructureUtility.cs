@@ -15,11 +15,13 @@ namespace Geometry.DataStructure
 				var p1 = edges[offset + j].FirstHalfEdge.Next.Vertex;
 
 				var forward = p1 - p0;
+				var upwards = -Vector3.Cross(forward, Vector3.Cross(forward, p0));
 
-				var translation = (p0 + p1) * 0.5f;
-				var rotation = Quaternion.LookRotation(forward);
+				var translation = (p0 + p1) * 0.5f + upwards.normalized * 0.0001f;
+				var rotation = Quaternion.LookRotation(forward, upwards);
+				var scale = new Vector3(0.005f, 1.0f, forward.magnitude);
 
-				edgeMatrices.Add(matrix * Matrix4x4.TRS(translation, rotation, new Vector3(tickness, tickness, forward.magnitude)));
+				edgeMatrices.Add(matrix * Matrix4x4.TRS(translation, rotation, scale));
 			}
 
 			Graphics.DrawMeshInstanced(mesh, 0, material, edgeMatrices);

@@ -156,6 +156,54 @@ public class RenderPlanet
 }
 
 [System.Serializable]
+public class RenderBoundaries
+{
+	public Mesh mesh = null;
+	public Material material = null;
+
+	private Planet planet = null;
+
+	public void SetPlanet(Planet planet)
+	{
+		this.planet = planet;
+	}
+
+	private Matrix4x4 GetBoundaryMatrice(Boundary boundary)
+	{
+		var p0 = boundary.Edge.FirstHalfEdge.Vertex;
+		var p1 = boundary.Edge.SecondHalfEdge.Vertex;
+
+		var forward = p1 - p0;
+		var upwards = -Vector3.Cross(boundary.parallelVector, boundary.perpendicularVector);
+
+		var translation = boundary.MidPoint + upwards * 0.0001f;
+		var rotation = Quaternion.LookRotation(forward, upwards);
+		var scale = new Vector3(0.005f, 0.005f, forward.magnitude);
+
+		return Matrix4x4.TRS(translation, rotation, scale);
+	}
+	private void DrawBoundariesFor(int offset, int count, Matrix4x4 planetMatrice)
+	{
+		var matrices = new Matrix4x4[count];
+		for (int i = 0; i < count; i++)
+			matrices[i] = planetMatrice * GetBoundaryMatrice(planet.boundaries[offset + i]);
+
+		Graphics.DrawMeshInstanced(mesh, 0, material, matrices);
+	}
+	public void DrawBoundaries(Matrix4x4 planetMatrice)
+	{
+		if (planet == null || mesh == null || material == null) return;
+
+		var drawCount = planet.boundaries.Count / 1023;
+		for (int i = 0; i < drawCount; i++)
+			DrawBoundariesFor(1023 * i, 1023, planetMatrice);
+
+		var countLeft = planet.boundaries.Count - 1023 * drawCount;
+		DrawBoundariesFor(1023 * drawCount, countLeft, planetMatrice);
+	}
+}
+
+[System.Serializable]
 public class RenderPolygonData
 {
 	public Mesh mesh = null;
@@ -217,53 +265,6 @@ public class RenderPlateMovement
 
 		var countLeft = planet.cells.Length - 1023 * drawCount;
 		DrawPlateMovementFor(1023 * drawCount, countLeft, planetMatrice);
-	}
-}
-
-[System.Serializable]
-public class RenderBoundaries
-{
-	public Mesh mesh = null;
-	public Material material = null;
-
-	private Planet planet = null;
-
-	public void SetPlanet(Planet planet)
-	{
-		this.planet = planet;
-	}
-
-	private Matrix4x4 GetBoundaryMatrice(Boundary boundary)
-	{
-		var p0 = boundary.Edge.FirstHalfEdge.Vertex;
-		var p1 = boundary.Edge.SecondHalfEdge.Vertex;
-
-		var forward = p1 - p0;
-
-		var translation = boundary.MidPoint;
-		var rotation = Quaternion.LookRotation(forward, Vector3.Cross(boundary.parallelVector, boundary.perpendicularVector));
-		var scale = new Vector3(0.005f, 0.005f, forward.magnitude);
-
-		return Matrix4x4.TRS(translation, rotation, scale);
-	}
-	private void DrawBoundariesFor(int offset, int count, Matrix4x4 planetMatrice)
-	{
-		var matrices = new Matrix4x4[count];
-		for (int i = 0; i < count; i++)
-			matrices[i] = planetMatrice * GetBoundaryMatrice(planet.boundaries[offset + i]);
-
-		Graphics.DrawMeshInstanced(mesh, 0, material, matrices);
-	}
-	public void DrawBoundaries(Matrix4x4 planetMatrice)
-	{
-		if (planet == null || mesh == null || material == null) return;
-
-		var drawCount = planet.boundaries.Count / 1023;
-		for (int i = 0; i < drawCount; i++)
-			DrawBoundariesFor(1023 * i, 1023, planetMatrice);
-
-		var countLeft = planet.boundaries.Count - 1023 * drawCount;
-		DrawBoundariesFor(1023 * drawCount, countLeft, planetMatrice);
 	}
 }
 

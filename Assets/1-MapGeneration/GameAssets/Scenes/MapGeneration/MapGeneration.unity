@@ -262,14 +262,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   renderPlanet:
     material: {fileID: 2100000, guid: c5470dd0272bade48ab0dfe774d2f338, type: 2}
-    renderMode: 0
+    renderMode: 1
     oceanColor: {r: 0.023529412, g: 0.25882354, b: 0.4509804, a: 1}
     groundColor: {r: 0.1254895, g: 0.5660378, b: 0.12935394, a: 1}
   renderBoundaries:
-    mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+    mesh: {fileID: 4300000, guid: 94260e0556c838d45a98fb9995e9fce0, type: 2}
     material: {fileID: 2100000, guid: 897713160644a6e4ab433d8a072608d3, type: 2}
   renderPolygonData:
-    mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+    mesh: {fileID: 4300000, guid: 94260e0556c838d45a98fb9995e9fce0, type: 2}
     material: {fileID: 2100000, guid: 897713160644a6e4ab433d8a072608d3, type: 2}
   renderPlateMovement:
     mesh: {fileID: 4300000, guid: 50d18d58098cf234ab54232bafc25d65, type: 2}
