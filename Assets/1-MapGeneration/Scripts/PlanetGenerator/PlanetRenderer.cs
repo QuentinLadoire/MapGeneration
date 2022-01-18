@@ -6,49 +6,90 @@ using Geometry;
 using Geometry.DataStructure;
 
 [System.Serializable]
-public struct RenderPlateMovementSetting
-{
-	public Mesh mesh;
-	public Material material;
-
-	public static RenderPlateMovementSetting Default = new RenderPlateMovementSetting
-	{
-		mesh = null,
-		material = null
-	};
-}
-
-[ExecuteAlways]
-public class PlanetRenderer : MonoBehaviour
+public class RenderPlanet
 {
 	public enum RenderMode
 	{
 		Plates,
-		PlatesType
+		Terrain
 	}
 
-	[Header("Planet Setting")]
-	[SerializeField] private Material material = null;
-	[SerializeField] private Color oceanColor = Color.white;
-	[SerializeField] private Color groundColor = Color.white;
+	public Material material = null;
+	public RenderMode renderMode = RenderMode.Plates;
 
-	[Header("Debug Settings")]
-	[SerializeField] private RenderHalfEdgeSetting renderPolygonDataSetting = RenderHalfEdgeSetting.Default;
-	[SerializeField] private RenderPlateMovementSetting renderPlateMovementSetting = RenderPlateMovementSetting.Default;
+	public Color oceanColor = Color.white;
+	public Color groundColor = Color.white;
 
-	[Header("Render Options")]
-	[SerializeField] private bool renderPlanet = false;
-	[SerializeField] private bool renderPolygonData = false;
-	[SerializeField] private bool renderPlateBorder = false;
-	[SerializeField] private bool renderPlateMovement = false;
-	[SerializeField] private RenderMode renderMode = RenderMode.Plates;
-
-	[SerializeField] private Mesh mesh = null;
+	private Mesh mesh = null;
 	private Planet planet = null;
+	private Color[] colors = null;
 	private MeshData meshData = null;
 
-	private Color[] colors = null;
+	private void InitializeMesh()
+	{
+		if (mesh == null)
+			mesh = new Mesh();
+	}
+	private void InitializeColors()
+	{
+		colors = new Color[planet.tectonicPlates.Length];
+		for (int i = 0; i < planet.tectonicPlates.Length; i++)
+			colors[i] = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
+	}
+	private void InitializeMeshData()
+	{
+		if (meshData == null)
+			meshData = new MeshData();
+		else
+			meshData.Clear();
+	}
 
+	public void SetPlanet(Planet planet)
+	{
+		this.planet = planet;
+
+		InitializeMesh();
+		InitializeColors();
+		InitializeMeshData();
+	}
+
+	private void ComputeCellsColor()
+	{
+		switch (renderMode)
+		{
+			case RenderMode.Plates:
+				ComputePlatesColor();
+				break;
+
+			case RenderMode.Terrain:
+				ComputeTerrainColor();
+				break;
+		}
+	}
+	private void ComputePlatesColor()
+	{
+		for (int i = 0; i < planet.cells.Length; i++)
+		{
+			var cell = planet.cells[i];
+			var plate = cell.Plate;
+
+			meshData.AddColor(colors[cell.plateIndex]);                                  //Cell Center Vertex Color
+			cell.Face.ForEachHalfEdge(() => meshData.AddColor(colors[cell.plateIndex])); //Cell Corner Vertex Color
+		}
+	}
+	private void ComputeTerrainColor()
+	{
+		for (int i = 0; i < planet.cells.Length; i++)
+		{
+			var cell = planet.cells[i];
+			var plate = cell.Plate;
+
+			var color = plate.isOceanic ? oceanColor : groundColor;
+
+			meshData.AddColor(color);                                  //Cell Center Vertex Color
+			cell.Face.ForEachHalfEdge(() => meshData.AddColor(color)); //Cell Corner Vertex Color
+		}
+	}
 	private void ComputeCellsGeometry()
 	{
 		for (int i = 0; i < planet.cells.Length; i++)
@@ -72,211 +113,220 @@ public class PlanetRenderer : MonoBehaviour
 			});
 		}
 	}
+
+	public void RecalculateColors()
+	{
+		if (meshData == null) return;
+
+		meshData.ClearColors();
+
+		ComputeCellsColor();
+	}
 	public void RecalculateGeometry()
 	{
-		if (meshData == null)
-			meshData = new MeshData();
+		if (meshData == null) return;
 
 		meshData.Clear();
 
 		ComputeCellsGeometry();
 	}
 
-	private void ComputePlateCellsColor()
+	public void ApplyMeshColor()
 	{
-		for (int i = 0; i < planet.cells.Length; i++)
-		{
-			var cell = planet.cells[i];
-			var plate = cell.Plate;
+		if (mesh == null) return;
 
-			meshData.AddColor(colors[cell.plateIndex]);                                  //Cell Center Vertex Color
-			cell.Face.ForEachHalfEdge(() => meshData.AddColor(colors[cell.plateIndex])); //Cell Corner Vertex Color
-		}
+		mesh.SetColors(meshData.Colors);
 	}
-	private void ComputePlateTypeCellsColor()
-	{
-		for (int i = 0; i < planet.cells.Length; i++)
-		{
-			var cell = planet.cells[i];
-			var plate = cell.Plate;
-
-			var color = plate.isOceanic ? oceanColor : groundColor;
-
-			meshData.AddColor(color);                                  //Cell Center Vertex Color
-			cell.Face.ForEachHalfEdge(() => meshData.AddColor(color)); //Cell Corner Vertex Color
-		}
-	}
-	private void ComputeCellsColor()
-	{
-		switch (renderMode)
-		{
-			case RenderMode.Plates:
-				ComputePlateCellsColor();
-				break;
-
-			case RenderMode.PlatesType:
-				ComputePlateTypeCellsColor();
-				break;
-		}
-	}
-	public void RecalculateColors()
-	{
-		meshData.ClearColors();
-
-		ComputeCellsColor();
-	}
-
-	public void RecalculateMeshData()
-	{
-		if (meshData == null)
-			meshData = new MeshData();
-
-		meshData.Clear();
-
-		RecalculateGeometry();
-		RecalculateColors();
-	}
-
 	public void ApplyMeshGeometry()
 	{
-		if (mesh == null)
-			mesh = new Mesh();
+		if (mesh == null) return;
 
 		mesh.SetVertices(meshData.Vertices);
 		mesh.SetTriangles(meshData.Triangles, 0);
 
 		mesh.RecalculateNormals();
 	}
-	public void ApplyMeshColor()
+
+	public void DrawPlanet(Matrix4x4 planetMatrice)
 	{
-		mesh.SetColors(meshData.Colors);
+		if (planet == null || mesh == null || material == null) return;
+
+		Graphics.DrawMesh(mesh, planetMatrice, material, 0);
 	}
+}
+
+[System.Serializable]
+public class RenderPolygonData
+{
+	public Mesh mesh = null;
+	public Material material = null;
+
+	private Planet planet = null;
+
+	public void SetPlanet(Planet planet)
+	{
+		this.planet = planet;
+	}
+
+	public void DrawPolygonData(Matrix4x4 planetMatrice)
+	{
+		if (planet == null || planet.polygonHalfEdgeData == null || mesh == null || material == null) return;
+
+		DataStructureUtility.DrawHalfEdgeData(planet.polygonHalfEdgeData, mesh, material, planetMatrice);
+	}
+}
+
+[System.Serializable]
+public class RenderPlateMovement
+{
+	public Mesh mesh = null;
+	public Material material = null;
+
+	private Planet planet = null;
+
+	public void SetPlanet(Planet planet)
+	{
+		this.planet = planet;
+	}
+
+	private Matrix4x4 GetPlateMovementMatriceAtCellPosition(Cell cell)
+	{
+		var cellRadius = (cell.Face.First.Vertex - cell.position).magnitude;
+
+		var translation = cell.position + cell.normal * 0.0001f;
+		var rotation = Quaternion.LookRotation(cell.linearDirection, cell.normal);
+		var scale = new Vector3(0.0025f * planet.radius, 1.0f, cell.linearMagnitude / planet.angularVelocityMax * cellRadius);
+
+		return Matrix4x4.TRS(translation, rotation, scale);
+	}
+	private void DrawPlateMovementFor(int offset, int count, Matrix4x4 planetMatrice)
+	{
+		var matrices = new Matrix4x4[count];
+		for (int i = 0; i < count; i++)
+			matrices[i] = planetMatrice * GetPlateMovementMatriceAtCellPosition(planet.cells[offset + i]);
+
+		Graphics.DrawMeshInstanced(mesh, 0, material, matrices);
+	}
+	public void DrawPlateMovement(Matrix4x4 planetMatrice)
+	{
+		if (planet == null || mesh == null || material == null) return;
+
+		var drawCount = planet.cells.Length / 1023;
+		for (int i = 0; i < drawCount; i++)
+			DrawPlateMovementFor(1023 * i, 1023, planetMatrice);
+
+		var countLeft = planet.cells.Length - 1023 * drawCount;
+		DrawPlateMovementFor(1023 * drawCount, countLeft, planetMatrice);
+	}
+}
+
+[System.Serializable]
+public class RenderBoundaries
+{
+	public Mesh mesh = null;
+	public Material material = null;
+
+	private Planet planet = null;
+
+	public void SetPlanet(Planet planet)
+	{
+		this.planet = planet;
+	}
+
+	private Matrix4x4 GetBoundaryMatrice(Boundary boundary)
+	{
+		var p0 = boundary.Edge.FirstHalfEdge.Vertex;
+		var p1 = boundary.Edge.SecondHalfEdge.Vertex;
+
+		var forward = p1 - p0;
+
+		var translation = boundary.MidPoint;
+		var rotation = Quaternion.LookRotation(forward, Vector3.Cross(boundary.parallelVector, boundary.perpendicularVector));
+		var scale = new Vector3(0.005f, 0.005f, forward.magnitude);
+
+		return Matrix4x4.TRS(translation, rotation, scale);
+	}
+	private void DrawBoundariesFor(int offset, int count, Matrix4x4 planetMatrice)
+	{
+		var matrices = new Matrix4x4[count];
+		for (int i = 0; i < count; i++)
+			matrices[i] = planetMatrice * GetBoundaryMatrice(planet.boundaries[offset + i]);
+
+		Graphics.DrawMeshInstanced(mesh, 0, material, matrices);
+	}
+	public void DrawBoundaries(Matrix4x4 planetMatrice)
+	{
+		if (planet == null || mesh == null || material == null) return;
+
+		var drawCount = planet.boundaries.Count / 1023;
+		for (int i = 0; i < drawCount; i++)
+			DrawBoundariesFor(1023 * i, 1023, planetMatrice);
+
+		var countLeft = planet.boundaries.Count - 1023 * drawCount;
+		DrawBoundariesFor(1023 * drawCount, countLeft, planetMatrice);
+	}
+}
+
+[ExecuteAlways]
+public class PlanetRenderer : MonoBehaviour
+{
+	[SerializeField] private RenderPlanet renderPlanet = new RenderPlanet();
+	[SerializeField] private RenderBoundaries renderBoundaries = new RenderBoundaries();
+	[SerializeField] private RenderPolygonData renderPolygonData = new RenderPolygonData();
+	[SerializeField] private RenderPlateMovement renderPlateMovement = new RenderPlateMovement();
+
+	[Header("Render Options")]
+	[SerializeField] private bool wantToRenderPlanet = false;
+	[SerializeField] private bool wantToRenderBoundaries = false;
+	[SerializeField] private bool wantToRenderPolygonData = false;
+	[SerializeField] private bool wantToRenderPlateMovement = false;
+
+	private Planet planet = null;
+
 	public void RecalculateMesh()
 	{
-		if (mesh == null)
-			mesh = new Mesh();
-
-		ApplyMeshGeometry();
-		ApplyMeshColor();
+		renderPlanet.ApplyMeshGeometry();
+		renderPlanet.ApplyMeshColor();
 	}
+	public void RecalculateMeshData()
+	{
+		renderPlanet.RecalculateGeometry();
+		renderPlanet.RecalculateColors();
+	}
+
 	public void SetPlanet(Planet planet)
 	{
 		this.planet = planet;
 
-		colors = new Color[planet.tectonicPlates.Length];
-		for (int i = 0; i < planet.tectonicPlates.Length; i++)
-			colors[i] = Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
+		renderPlanet.SetPlanet(planet);
+		renderBoundaries.SetPlanet(planet);
+		renderPolygonData.SetPlanet(planet);
+		renderPlateMovement.SetPlanet(planet);
 
 		RecalculateMeshData();
 		RecalculateMesh();
 	}
 
-	private void DrawMovementForCells(int offset, int count, Mesh mesh, Material material, Matrix4x4 matrix)
-	{
-		var matrices = new List<Matrix4x4>(count);
-		for (int j = 0; j < count; j++)
-		{
-			var cell = planet.cells[offset + j];
-			var cellRadius = (cell.Face.First.Vertex - cell.position).magnitude;
-
-			var translation = cell.position + cell.normal * 0.0001f;
-			var rotation = Quaternion.LookRotation(cell.linearDirection, cell.normal);
-			var scale = new Vector3(0.0025f * planet.radius, 1.0f, cell.linearMagnitude / planet.angularVelocityMax * cellRadius);
-
-			matrices.Add(matrix * Matrix4x4.TRS(translation, rotation, scale));
-		}
-
-		Graphics.DrawMeshInstanced(mesh, 0, material, matrices);
-	}
-
-	private void DrawPlanet()
-	{
-		if (renderPlanet && planet != null && material != null && mesh != null)
-			Graphics.DrawMesh(mesh, transform.localToWorldMatrix, material, 0);
-	}
-	private void DrawPolygonData()
-	{
-		if (planet == null || planet.polygonHalfEdgeData == null) return;
-
-		if (renderPolygonData && renderPolygonDataSetting.mesh != null && renderPolygonDataSetting.material != null)
-			DataStructureUtility.DrawHalfEdgeData(planet.polygonHalfEdgeData, renderPolygonDataSetting, transform.localToWorldMatrix);
-	}
-	private void DrawPlateMovement()
-	{
-		if (planet == null || !renderPlateMovement) return;
-		if (renderPlateMovementSetting.mesh == null || renderPlateMovementSetting.material == null) return;
-
-		var drawCount = planet.cells.Length / 1023;
-		for (int i = 0; i < drawCount; i++)
-			DrawMovementForCells(1023 * i, 1023, renderPlateMovementSetting.mesh, renderPlateMovementSetting.material, transform.localToWorldMatrix);
-
-		var countLeft = planet.cells.Length - 1023 * drawCount;
-		DrawMovementForCells(1023 * drawCount, countLeft, renderPlateMovementSetting.mesh, renderPlateMovementSetting.material, transform.localToWorldMatrix);
-	}
-	private void DrawPlateBorder()
-	{
-		if (planet == null || !renderPlateBorder) return;
-
-		int drawCount = planet.boundaries.Count / 1023;
-		for (int i = 0; i < drawCount; i++)
-		{
-			var matrices = new List<Matrix4x4>(1023);
-			for (int j = 0; j < 1023; j++)
-			{
-				var border = planet.boundaries[j + i * 1023];
-
-				var p0 = border.Edge.FirstHalfEdge.Vertex;
-				var p1 = border.Edge.SecondHalfEdge.Vertex;
-
-				var forward = p1 - p0;
-
-				var translation = (p0 + p1) * 0.5f;
-				var rotation = Quaternion.LookRotation(forward);
-				var scale = new Vector3(renderPolygonDataSetting.tickness, renderPolygonDataSetting.tickness, forward.magnitude);
-
-				matrices.Add(transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, scale));
-			}
-
-			Graphics.DrawMeshInstanced(renderPolygonDataSetting.mesh, 0, renderPolygonDataSetting.material, matrices);
-		}
-
-		var countLeft = planet.boundaries.Count - 1023 * drawCount;
-		var matrices2 = new List<Matrix4x4>(countLeft);
-		for (int i = 0; i < countLeft; i++)
-		{
-			var border = planet.boundaries[i + drawCount * 1023];
-
-			var p0 = border.Edge.FirstHalfEdge.Vertex;
-			var p1 = border.Edge.SecondHalfEdge.Vertex;
-
-			var forward = p1 - p0;
-
-			var translation = (p0 + p1) * 0.5f;
-			var rotation = Quaternion.LookRotation(forward);
-			var scale = new Vector3(renderPolygonDataSetting.tickness, renderPolygonDataSetting.tickness, forward.magnitude);
-
-			matrices2.Add(transform.localToWorldMatrix * Matrix4x4.TRS(translation, rotation, scale));
-		}
-
-		Graphics.DrawMeshInstanced(renderPolygonDataSetting.mesh, 0, renderPolygonDataSetting.material, matrices2);
-	}
-
 	private void Update()
 	{
-		DrawPlanet();
+		if (wantToRenderPlanet)
+			renderPlanet.DrawPlanet(transform.localToWorldMatrix);
 
-		DrawPolygonData();
+		if (wantToRenderBoundaries)
+			renderBoundaries.DrawBoundaries(transform.localToWorldMatrix);
 
-		DrawPlateMovement();
+		if (wantToRenderPolygonData)
+			renderPolygonData.DrawPolygonData(transform.localToWorldMatrix);
 
-		DrawPlateBorder();
+		if (wantToRenderPlateMovement)
+			renderPlateMovement.DrawPlateMovement(transform.localToWorldMatrix);
 	}
 
 	private void OnValidate()
 	{
 		if (planet == null) return;
 
-		RecalculateColors();
-		ApplyMeshColor();
+		RecalculateMeshData();
+		RecalculateMesh();
 	}
 }

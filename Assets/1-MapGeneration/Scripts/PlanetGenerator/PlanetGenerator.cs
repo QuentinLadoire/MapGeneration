@@ -10,9 +10,10 @@ public class PlanetGenerator : MonoBehaviour
 {
 	[Header("Planet Settings")]
 	[SerializeField] private int seed = 0;
-	[SerializeField] private float planetRadius = 1.0f;
 	[SerializeField] private int planetRefiningStep = 3;
 	[SerializeField] private int tectonicPlateCount = 5;
+
+	[SerializeField] private float planetRadius = 1.0f;
 	[SerializeField] private float angularVelocityMax = 1.0f;
 	[SerializeField][Range(0.0f, 1.0f)] private float oceanicRate = 0.7f;
 
@@ -50,11 +51,14 @@ public class PlanetGenerator : MonoBehaviour
 			var adjacentCell = planet.cells[halfEdge.Opposite.faceIndex];
 			if (adjacentCell.IsAssign && adjacentCell.plateIndex != plateIndex)
 			{
-				var border = new Boundaries();
-				border.parentPlanet = planet;
-				border.edgeIndex = halfEdge.edgeIndex;
+				var boundary = new Boundary();
+				boundary.parentPlanet = planet;
+				boundary.edgeIndex = halfEdge.edgeIndex;
 
-				planet.boundaries.Add(border);
+				boundary.parallelVector = (boundary.RightVertex - boundary.LeftVertex).normalized;
+				boundary.perpendicularVector = Vector3.Cross(boundary.parallelVector, boundary.LeftVertex).normalized;
+
+				planet.boundaries.Add(boundary);
 			}
 		});
 	}
@@ -108,6 +112,30 @@ public class PlanetGenerator : MonoBehaviour
 			}
 		}
 	}
+	public void CalculateBoundariesStress()
+	{
+		for (int i = 0; i < planet.boundaries.Count; i++)
+		{
+			var boundary = planet.boundaries[i];
+			var stress = boundary.LeftCell.LinearVelocity - boundary.RightCell.LinearVelocity;
+
+			var parallelDot = Vector3.Dot(stress, boundary.parallelVector);
+			var perpendicularDot = Vector3.Dot(stress, boundary.perpendicularVector);
+
+			if (Mathf.Abs(parallelDot) > Mathf.Abs(perpendicularDot))
+			{
+				boundary.type = BoundaryType.Transform;
+			}
+			else if (perpendicularDot > 0.0f)
+			{
+				boundary.type = BoundaryType.Convergent;
+			}
+			else
+			{
+				boundary.type = BoundaryType.Divergent;
+			}
+		}
+	}
 	public void DeterminePlateBorder()
 	{
 		var platesBorders = new List<int>[planet.tectonicPlates.Length];
@@ -135,6 +163,7 @@ public class PlanetGenerator : MonoBehaviour
 		InitializePlanet();
 		InitializePlates();
 		AssignCellToPlates();
+		CalculateBoundariesStress();
 		DeterminePlateBorder();
 
 		GetComponent<PlanetRenderer>().SetPlanet(planet);

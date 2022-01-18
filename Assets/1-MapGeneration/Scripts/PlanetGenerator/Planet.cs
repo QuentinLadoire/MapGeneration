@@ -4,13 +4,34 @@ using UnityEngine;
 
 using Geometry.DataStructure;
 
-public class Boundaries
+public enum BoundaryType
+{
+	None,
+	Transform,
+	Convergent,
+	Divergent
+}
+
+public class Boundary
 {
 	public Planet parentPlanet = null;
 
 	public int edgeIndex = -1;
 
+	public BoundaryType type = BoundaryType.None;
+
+	public Vector3 parallelVector = Vector3.zero;
+	public Vector3 perpendicularVector = Vector3.zero;
+
 	public Edge Edge => parentPlanet.polygonHalfEdgeData.edges[edgeIndex];
+
+	public Vector3 LeftVertex => Edge.FirstHalfEdge.Vertex;
+	public Vector3 RightVertex => Edge.FirstHalfEdge.Next.Vertex;
+
+	public Vector3 MidPoint => (LeftVertex + RightVertex) * 0.5f;
+
+	public Cell RightCell => parentPlanet.cells[Edge.FirstHalfEdge.faceIndex];
+	public Cell LeftCell => parentPlanet.cells[Edge.SecondHalfEdge.faceIndex];
 }
 
 public class Cell
@@ -98,8 +119,7 @@ public class Planet
 	public Cell[] cells = null;
 	public TectonicPlate[] tectonicPlates = null;
 	public HalfEdgeData polygonHalfEdgeData = null;
-
-	public List<Boundaries> boundaries = new List<Boundaries>();
+	public List<Boundary> boundaries = new List<Boundary>();
 
 	public Planet(HalfEdgeData polygonHalfEdgeData)
 	{
