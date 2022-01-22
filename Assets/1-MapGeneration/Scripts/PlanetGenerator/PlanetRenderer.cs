@@ -161,14 +161,16 @@ public class RenderBoundaries
 	public enum RenderMode
 	{
 		Boundary,
-		BoundaryType
+		BoundaryType,
+		BoundaryStress
 	}
 
 	public Mesh mesh = null;
 	public Material material = null;
+	public Material stressMaterial = null;
 	public Material transformMaterial = null;
-	public Material convergentMaterial = null;
 	public Material divergentMaterial = null;
+	public Material convergentMaterial = null;
 	public RenderMode renderMode = RenderMode.Boundary;
 
 	private Planet planet = null;
@@ -243,6 +245,21 @@ public class RenderBoundaries
 		DrawBoundariesFor(convergentMatrices, convergentMaterial);
 		DrawBoundariesFor(divergentMatrices, divergentMaterial);
 	}
+	private void DrawBoundariesStress(Matrix4x4 planetMatrice)
+	{
+		for (int i = 0; i < planet.boundaries.Count; i++)
+		{
+			var boundary = planet.boundaries[i];
+			var propertyBlock = new MaterialPropertyBlock();
+
+			var matrice = planetMatrice * GetBoundaryMatrice(boundary);
+
+			var color = Color.Lerp(Color.green, Color.red, boundary.stress / planet.boundaryStressMax);
+			propertyBlock.SetColor("_BaseColor", color);
+						
+			Graphics.DrawMesh(mesh, matrice, stressMaterial, 0, null, 0, propertyBlock);
+		}
+	}
 
 	public void DrawBoundaries(Matrix4x4 planetMatrice)
 	{
@@ -256,6 +273,10 @@ public class RenderBoundaries
 
 			case RenderMode.BoundaryType:
 				DrawBoundariesType(planetMatrice);
+				break;
+
+			case RenderMode.BoundaryStress:
+				DrawBoundariesStress(planetMatrice);
 				break;
 		}
 	}

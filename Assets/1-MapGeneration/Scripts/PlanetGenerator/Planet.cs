@@ -18,6 +18,8 @@ public class Boundary
 
 	public int edgeIndex = -1;
 
+	public float stress = 0.0f;
+
 	public BoundaryType type = BoundaryType.None;
 
 	public Vector3 parallelVector = Vector3.zero;
@@ -115,6 +117,7 @@ public class Planet
 {
 	public float radius = 1.0f;
 	public float angularVelocityMax = 0.0f;
+	public float boundaryStressMax = 0.0f;
 
 	public Cell[] cells = null;
 	public TectonicPlate[] tectonicPlates = null;

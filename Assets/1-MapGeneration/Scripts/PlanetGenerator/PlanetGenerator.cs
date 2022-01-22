@@ -38,6 +38,39 @@ public class PlanetGenerator : MonoBehaviour
 
 		return nearestPlateIndex;
 	}
+	private void AddNewBoundary(int edgeIndex)
+	{
+		var boundary = new Boundary();
+		boundary.parentPlanet = planet;
+		boundary.edgeIndex = edgeIndex;
+
+		boundary.parallelVector = (boundary.RightVertex - boundary.LeftVertex).normalized;
+		boundary.perpendicularVector = Vector3.Cross(boundary.parallelVector, boundary.LeftVertex).normalized;
+
+		var stress = boundary.RightCell.LinearVelocity - boundary.LeftCell.LinearVelocity;
+		var parallelDot = Vector3.Dot(stress, boundary.parallelVector);
+		var perpendicularDot = Vector3.Dot(stress, boundary.perpendicularVector);
+
+		if (Mathf.Abs(parallelDot) > Mathf.Abs(perpendicularDot))
+		{
+			boundary.type = BoundaryType.Transform;
+		}
+		else if (perpendicularDot > 0.0f)
+		{
+			boundary.type = BoundaryType.Convergent;
+		}
+		else
+		{
+			boundary.type = BoundaryType.Divergent;
+		}
+
+		boundary.stress = stress.magnitude;
+
+		if (planet.boundaryStressMax < boundary.stress)
+			planet.boundaryStressMax = boundary.stress;
+
+		planet.boundaries.Add(boundary);
+	}
 	private void AddCellToPlate(int cellIndex, int plateIndex)
 	{
 		var cell = planet.cells[cellIndex];
@@ -51,14 +84,7 @@ public class PlanetGenerator : MonoBehaviour
 			var adjacentCell = planet.cells[halfEdge.Opposite.faceIndex];
 			if (adjacentCell.IsAssign && adjacentCell.plateIndex != plateIndex)
 			{
-				var boundary = new Boundary();
-				boundary.parentPlanet = planet;
-				boundary.edgeIndex = halfEdge.edgeIndex;
-
-				boundary.parallelVector = (boundary.RightVertex - boundary.LeftVertex).normalized;
-				boundary.perpendicularVector = Vector3.Cross(boundary.parallelVector, boundary.LeftVertex).normalized;
-
-				planet.boundaries.Add(boundary);
+				AddNewBoundary(halfEdge.edgeIndex);
 			}
 		});
 	}
@@ -112,30 +138,6 @@ public class PlanetGenerator : MonoBehaviour
 			}
 		}
 	}
-	public void CalculateBoundariesStress()
-	{
-		for (int i = 0; i < planet.boundaries.Count; i++)
-		{
-			var boundary = planet.boundaries[i];
-			var stress = boundary.RightCell.LinearVelocity - boundary.LeftCell.LinearVelocity;
-
-			var parallelDot = Vector3.Dot(stress, boundary.parallelVector);
-			var perpendicularDot = Vector3.Dot(stress, boundary.perpendicularVector);
-
-			if (Mathf.Abs(parallelDot) > Mathf.Abs(perpendicularDot))
-			{
-				boundary.type = BoundaryType.Transform;
-			}
-			else if (perpendicularDot > 0.0f)
-			{
-				boundary.type = BoundaryType.Convergent;
-			}
-			else
-			{
-				boundary.type = BoundaryType.Divergent;
-			}
-		}
-	}
 	public void DeterminePlateBorder()
 	{
 		var platesBorders = new List<int>[planet.tectonicPlates.Length];
@@ -163,7 +165,6 @@ public class PlanetGenerator : MonoBehaviour
 		InitializePlanet();
 		InitializePlates();
 		AssignCellToPlates();
-		CalculateBoundariesStress();
 		DeterminePlateBorder();
 
 		GetComponent<PlanetRenderer>().SetPlanet(planet);
