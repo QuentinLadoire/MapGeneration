@@ -34,5 +34,13 @@ namespace Geometry
 		{
 			return ProjectOnUnitSphere(vector) * radius;
 		}
+
+		public static float TriangleArea(Vector3 p0, Vector3 p1, Vector3 p2)
+		{
+			var v0 = p1 - p0;
+			var v1 = p2 - p0;
+
+			return 0.5f * Vector3.Cross(v0, v1).magnitude;
+		}
 	}
 }
