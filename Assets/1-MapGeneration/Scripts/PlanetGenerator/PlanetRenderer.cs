@@ -11,6 +11,7 @@ public class RenderPlanet
 	public enum RenderMode
 	{
 		Plates,
+		Elevation,
 		Terrain
 	}
 
@@ -61,6 +62,10 @@ public class RenderPlanet
 				ComputePlatesColor();
 				break;
 
+			case RenderMode.Elevation:
+				ComputeElevationColor();
+				break;
+
 			case RenderMode.Terrain:
 				ComputeTerrainColor();
 				break;
@@ -71,7 +76,6 @@ public class RenderPlanet
 		for (int i = 0; i < planet.cells.Length; i++)
 		{
 			var cell = planet.cells[i];
-			var plate = cell.Plate;
 
 			meshData.AddColor(colors[cell.plateIndex]);                                  //Cell Center Vertex Color
 			cell.Face.ForEachHalfEdge(() => meshData.AddColor(colors[cell.plateIndex])); //Cell Corner Vertex Color
@@ -85,6 +89,21 @@ public class RenderPlanet
 			var plate = cell.Plate;
 
 			var color = plate.isOceanic ? oceanColor : groundColor;
+
+			color *= (cell.elevation + 1) * 0.5f;
+
+			meshData.AddColor(color);                                  //Cell Center Vertex Color
+			cell.Face.ForEachHalfEdge(() => meshData.AddColor(color)); //Cell Corner Vertex Color
+		}
+	}
+	private void ComputeElevationColor()
+	{
+		for (int i = 0; i < planet.cells.Length; i++)
+		{
+			var cell = planet.cells[i];
+
+			var t = Mathf.Pow((cell.elevation + 1) * 0.5f, 2);
+			var color = Color.Lerp(Color.black, Color.white, t);
 
 			meshData.AddColor(color);                                  //Cell Center Vertex Color
 			cell.Face.ForEachHalfEdge(() => meshData.AddColor(color)); //Cell Corner Vertex Color
@@ -254,13 +273,13 @@ public class RenderBoundaries
 
 			var matrice = planetMatrice * GetBoundaryMatrice(boundary);
 
-			var color = Color.Lerp(Color.green, Color.red, boundary.stress / planet.boundaryStressMax);
+			var color = Color.Lerp(Color.green, Color.red, boundary.StressInPercent);
 			propertyBlock.SetColor("_BaseColor", color);
 						
 			Graphics.DrawMesh(mesh, matrice, stressMaterial, 0, null, 0, propertyBlock);
 		}
 	}
-
+	 
 	public void DrawBoundaries(Matrix4x4 planetMatrice)
 	{
 		if (planet == null || mesh == null || material == null) return;

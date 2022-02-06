@@ -13,11 +13,43 @@ public class PlanetGenerator : MonoBehaviour
 	[SerializeField] private int planetRefiningStep = 3;
 	[SerializeField] private int tectonicPlateCount = 5;
 
+	[SerializeField] private int powElevation = 10;
 	[SerializeField] private float planetRadius = 1.0f;
+	[SerializeField] private float elevationMax = 1.0f;
 	[SerializeField] private float angularVelocityMax = 1.0f;
 	[SerializeField][Range(0.0f, 1.0f)] private float oceanicRate = 0.7f;
 
 	private Planet planet = null;
+
+	private float GetConvergentElevation(float distance, int pow)
+	{
+		var inverse = 1 - distance;
+		var elevation = (1 / inverse) * Mathf.Pow(inverse, pow);
+
+		return elevation;
+	}
+	private float GetDivergentElevation(float distance, int pow)
+	{
+		var inverse = 1 - distance;
+		var elevation = (1 / inverse) * Mathf.Pow(inverse, pow);
+
+		return -elevation;
+	}
+
+	private bool IsOrogenicBelts(Boundary boundary)
+	{
+		var isConvergent = boundary.type == BoundaryType.Convergent;
+		var isOrogenic = boundary.LeftCell.Plate.isOceanic == boundary.RightCell.Plate.isOceanic;
+
+		return isConvergent && isOrogenic;
+	}
+	private bool IsSubductionZones(Boundary boundary)
+	{
+		var isConvergent = boundary.type == BoundaryType.Convergent;
+		var isSubduction = boundary.LeftCell.Plate.isOceanic != boundary.RightCell.Plate.isOceanic;
+
+		return isConvergent && isSubduction;
+	}
 
 	private int GetNearestPlateIndex(Cell cell)
 	{
@@ -85,11 +117,14 @@ public class PlanetGenerator : MonoBehaviour
 			if (adjacentCell.IsAssign && adjacentCell.plateIndex != plateIndex)
 			{
 				AddNewBoundary(halfEdge.edgeIndex);
+
+				cell.Plate.AddBoundary(planet.boundaries.Count - 1);
+				adjacentCell.Plate.AddBoundary(planet.boundaries.Count - 1);
 			}
 		});
 	}
 
-	public void InitializePlanet()
+	private void InitializePlanet()
 	{
 		DataStructureBuilder.CreateDualMeshData(MeshGenerator.CreateIcoSphere(planetRadius, planetRefiningStep), out DualHalfEdgeData dualMeshData);
 
@@ -99,7 +134,7 @@ public class PlanetGenerator : MonoBehaviour
 
 		Random.InitState(seed);
 	}
-	public void InitializePlates()
+	private void InitializePlates()
 	{
 		var plateLenght = tectonicPlateCount;
 
@@ -125,7 +160,7 @@ public class PlanetGenerator : MonoBehaviour
 			AddCellToPlate(cellIndex, i);
 		}
 	}
-	public void AssignCellToPlates()
+	private void AssignCellToPlates()
 	{
 		for (int i = 0; i < planet.cells.Length; i++)
 		{
@@ -138,7 +173,66 @@ public class PlanetGenerator : MonoBehaviour
 			}
 		}
 	}
-	public void DeterminePlateBorder()
+	private void DeterminePlatesCenter()
+	{
+		for (int i = 0; i < planet.tectonicPlates.Length; i++)
+		{
+			var plate = planet.tectonicPlates[i];
+			for (int j = 0; j < plate.CellCount; j++)
+			{
+				var cell = plate.GetCellAt(j);
+				plate.center += cell.position;
+			}
+			plate.center /= plate.CellCount;
+
+			plate.center = Geometry.GeometryUtility.ProjectOnSphere(plate.center, planetRadius);
+		}
+	}
+	private void AssignCellsElevation()
+	{
+		for (int i = 0; i < planet.cells.Length; i++)
+		{
+			var count = 0;
+			var elevationAverage = 0.0f;
+
+			var cell = planet.cells[i];
+			for (int j = 0; j < cell.Plate.BoundaryCount; j++)
+			{
+				var boundary = cell.Plate.GetBoundayAt(j);
+				if (boundary.type == BoundaryType.Transform)
+					continue;
+
+				var cellToCenterDistance = (cell.position - cell.Plate.center).sqrMagnitude;
+				var cellToBoundaryDistance = (cell.position - boundary.MidPoint).sqrMagnitude;
+				var boundaryToCenterDistance = (boundary.MidPoint - cell.Plate.center).sqrMagnitude;
+
+				if (cellToBoundaryDistance > boundaryToCenterDistance)
+					continue;
+
+				var ratio = cellToBoundaryDistance / (cellToCenterDistance + cellToBoundaryDistance);
+				if (IsSubductionZones(boundary) && !cell.Plate.isOceanic)
+				{
+					elevationAverage += boundary.StressInPercent * GetConvergentElevation(ratio, powElevation);
+					count++;
+				}
+				else if (IsOrogenicBelts(boundary))
+				{
+					elevationAverage += boundary.StressInPercent * GetConvergentElevation(ratio, powElevation);
+					count++;
+				}
+				else if (boundary.type == BoundaryType.Divergent)
+				{
+					elevationAverage += boundary.StressInPercent * GetDivergentElevation(ratio, powElevation);
+					count++;
+				}
+			}
+
+			elevationAverage /= count;
+
+			cell.elevation = elevationAverage;
+		}
+	}
+	private void DeterminePlateBorder()
 	{
 		var platesBorders = new List<int>[planet.tectonicPlates.Length];
 		for (int i = 0; i < platesBorders.Length; i++)
@@ -165,6 +259,8 @@ public class PlanetGenerator : MonoBehaviour
 		InitializePlanet();
 		InitializePlates();
 		AssignCellToPlates();
+		DeterminePlatesCenter();
+		AssignCellsElevation();
 		DeterminePlateBorder();
 
 		GetComponent<PlanetRenderer>().SetPlanet(planet);

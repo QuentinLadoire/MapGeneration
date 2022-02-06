@@ -25,6 +25,8 @@ public class Boundary
 	public Vector3 parallelVector = Vector3.zero;
 	public Vector3 perpendicularVector = Vector3.zero;
 
+	public float StressInPercent => stress / parentPlanet.boundaryStressMax;
+
 	public Edge Edge => parentPlanet.polygonHalfEdgeData.edges[edgeIndex];
 
 	public Vector3 LeftVertex => Edge.FirstHalfEdge.Vertex;
@@ -43,6 +45,8 @@ public class Cell
 	public int faceIndex = -1;
 	public int plateIndex = -1;
 
+	public float elevation = 0.0f;
+
 	public Vector3 normal = Vector3.zero;
 	public Vector3 position = Vector3.zero;
 
@@ -59,11 +63,16 @@ public class Cell
 public class TectonicPlate
 {
 	private List<int> cellIndexes = new List<int>();
+	private List<int> boundaryIndexes = new List<int>();
 	private List<int> borderVertexIndexes = new List<int>();
 
 	public Planet parentPlanet = null;
 
 	public bool isOceanic = false;
+
+	public float surface = 0.0f;
+
+	public Vector3 center = Vector3.zero;
 
 	public float angularMagnitude = 0.0f;
 	public Vector3 angularAxis = Vector3.zero;
@@ -72,6 +81,7 @@ public class TectonicPlate
 	public Cell CellOrigin => parentPlanet.cells[cellIndexes[0]];
 
 	public int CellCount => cellIndexes.Count;
+	public int BoundaryCount => boundaryIndexes.Count;
 	public int BorderVerticesCount => borderVertexIndexes.Count;
 
 	public void AddCell(int cellIndex)
@@ -82,7 +92,13 @@ public class TectonicPlate
 		cell.linearMagnitude = linearVelocity.magnitude;
 		cell.linearDirection = linearVelocity.normalized;
 
+		surface += parentPlanet.cellSurface;
+
 		cellIndexes.Add(cellIndex);
+	}
+	public void AddBoundary(int boundaryIndex)
+	{
+		boundaryIndexes.Add(boundaryIndex);
 	}
 	public void AddBorderVertex(int borderIndex)
 	{
@@ -93,6 +109,10 @@ public class TectonicPlate
 	{
 		return parentPlanet.cells[cellIndexes[index]];
 	}
+	public Boundary GetBoundayAt(int index)
+	{
+		return parentPlanet.boundaries[boundaryIndexes[index]];
+	}
 	public Vector3 GetBorderVertexAt(int index)
 	{
 		return parentPlanet.polygonHalfEdgeData.vertices[borderVertexIndexes[index]];
@@ -101,11 +121,16 @@ public class TectonicPlate
 	public void Clear()
 	{
 		ClearCells();
+		ClearBoundaries();
 		ClearBorderVertices();
 	}
 	public void ClearCells()
 	{
 		cellIndexes.Clear();
+	}
+	public void ClearBoundaries()
+	{
+		boundaryIndexes.Clear();
 	}
 	public void ClearBorderVertices()
 	{
@@ -116,8 +141,10 @@ public class TectonicPlate
 public class Planet
 {
 	public float radius = 1.0f;
-	public float angularVelocityMax = 0.0f;
+	public float surface = 0.0f;
+	public float cellSurface = 0.0f;
 	public float boundaryStressMax = 0.0f;
+	public float angularVelocityMax = 0.0f;
 
 	public Cell[] cells = null;
 	public TectonicPlate[] tectonicPlates = null;
@@ -128,6 +155,13 @@ public class Planet
 	{
 		this.polygonHalfEdgeData = polygonHalfEdgeData;
 
+		InitializeCells();
+		CalculateCellSurface();
+		CalculatePlanetSurface();
+	}
+
+	private void InitializeCells()
+	{
 		cells = new Cell[this.polygonHalfEdgeData.faces.Length];
 		for (int i = 0; i < this.polygonHalfEdgeData.faces.Length; i++)
 		{
@@ -148,5 +182,21 @@ public class Planet
 				parentPlanet = this
 			};
 		}
+	}
+	private void CalculateCellSurface()
+	{
+		var cell = cells[0];
+		var edgeCount = cells[0].Face.HalfEdgeCount;
+
+		var p0 = cell.position;
+		var p1 = cell.Face.GetHalfEdgeAt(0).Vertex;
+		var p2 = cell.Face.GetHalfEdgeAt(1).Vertex;
+		var triangleArea = Geometry.GeometryUtility.TriangleArea(p0, p1, p2);
+
+		cellSurface = triangleArea * edgeCount;
+	}
+	private void CalculatePlanetSurface()
+	{
+		surface = cells.Length * cellSurface;
 	}
 }
